@@ -148,7 +148,7 @@ export default function LoginScreen() {
                   </Text>
                   <Text style={styles.subtitle}>
                     {step === 'identifier'
-                      ? 'Sign in to access your medical records'
+                      ? 'Sign in to access your medical records with oncare'
                       : `We sent a code to ${identifier}`}
                   </Text>
 
