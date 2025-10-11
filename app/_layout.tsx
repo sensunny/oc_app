@@ -28,7 +28,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isAuthenticated && patient) {
       initializeNotifications({
-        patientId: patient.id,
+        patientId: patient._id,
         onNotificationReceived: (notification) => {
           console.log('Notification received (foreground):', notification);
         },

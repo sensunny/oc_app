@@ -25,9 +25,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { patient, logout } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('22');
+    await logout();
     router.replace('/login');
+    // router.replace('/login');
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -85,7 +87,7 @@ export default function ProfileScreen() {
         <View style={styles.avatarContainer}>
           <User size={40} color={COLORS.white} />
         </View>
-        <Text style={styles.patientName}>{patient?.full_name}</Text>
+        <Text style={styles.patientName}>{patient?.patient_name}</Text>
         <Text style={styles.patientId}>ID: {patient?.hospital_id}</Text>
       </View>
 

@@ -23,7 +23,7 @@ const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, sendOTP } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
@@ -49,7 +49,7 @@ export default function LoginScreen() {
     ]).start();
   }, [step]);
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     setErrors({ identifier: '', otp: '' });
 
     if (!identifier.trim()) {
@@ -62,9 +62,17 @@ export default function LoginScreen() {
       return;
     }
 
-    fadeAnim.setValue(0);
-    slideAnim.setValue(50);
-    setStep('otp');
+    console.log("handleOPT", {identifier})
+    const success = await sendOTP(identifier);
+    console.log("errro", {success})
+
+    if (success) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      setStep('otp');
+    } else {
+      Alert.alert('Invalid Input');
+    }
   };
 
   const handleVerifyOtp = async () => {

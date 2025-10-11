@@ -19,7 +19,8 @@ export default function DocumentsScreen() {
   const loadDocuments = async () => {
     if (!patient) return;
     try {
-      const docs = await documentApi.getDocuments(patient.id);
+      const docs = await documentApi.getPatientDocuments();
+      console.log({docs})
       setDocuments(docs);
     } catch (error) {
       console.error('Error loading documents:', error);

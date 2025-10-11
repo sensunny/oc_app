@@ -1,15 +1,26 @@
 export interface Patient {
-  id: string;
-  hospital_id: string;
-  mobile_number: string;
-  full_name: string;
+  _id: string;
+  patient_id: string;
+  patient_name: string;
+  is_registered: string;
+  phone_number: string;
   date_of_birth: string;
-  blood_group: string;
+  age_yrs: string;
+  age_mnths: string;
   gender: string;
   address: string;
-  emergency_contact: string;
-  created_at: string;
-  updated_at: string;
+  area: string;
+  city: string;
+  state: string;
+  reg_date: string;
+  aadhar_number: string;
+  registeration_center: string;
+  access_token: string;
+}
+
+export interface AuthData {
+  access_token: string;
+  expiresAt: string;
 }
 
 export interface Document {
@@ -38,6 +49,6 @@ export interface Notification {
 
 export interface AuthState {
   isAuthenticated: boolean;
-  patient: Patient | null;
   loading: boolean;
+  patient: Patient | null;
 }
