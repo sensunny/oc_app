@@ -14,9 +14,22 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser"
+    ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b941d44b-470f-44c6-b02d-c3c64fe38ea3"
+      }
+    },
+    "android": {
+      "package": "com.sensunny.patientmanagementapp"
     }
   }
 }
