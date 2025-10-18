@@ -17,7 +17,8 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-firebase/app"
     ],
     "experiments": {
       "typedRoutes": true
@@ -29,7 +30,12 @@
       }
     },
     "android": {
-      "package": "com.sensunny.patientmanagementapp"
+      "package": "com.sensunny.patientmanagementapp",
+      "googleServicesFile": "./google-services.json"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist"
     }
   }
 }
