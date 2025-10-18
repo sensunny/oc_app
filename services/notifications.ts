@@ -96,6 +96,14 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
       return null;
     }
 
+    if (Platform.OS === 'ios') {
+      await messaging().registerDeviceForRemoteMessages();
+      const apnsToken = await messaging().getAPNSToken();
+      if (apnsToken) {
+        console.log('APNS Token:', apnsToken);
+      }
+    }
+
     const fcmToken = await messaging().getToken();
     console.log('FCM Token:', fcmToken);
 
