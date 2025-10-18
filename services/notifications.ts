@@ -1,6 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { pushTokenApi } from './api';
+import messaging from '@react-native-firebase/messaging';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { firebaseConfig } from '../config/firebase';
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -83,22 +86,18 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
       return null;
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.log('Failed to get push token for push notification!');
+    if (!enabled) {
+      console.log('Failed to get push notification permissions');
       return null;
     }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'your-expo-project-id',
-    });
+    const fcmToken = await messaging().getToken();
+    console.log('FCM Token:', fcmToken);
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -118,7 +117,7 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
       });
     }
 
-    return tokenData.data;
+    return fcmToken;
   } catch (error) {
     console.error('Error registering for push notifications:', error);
     return null;
@@ -171,4 +170,69 @@ export const clearBadge = async () => {
 
 export const dismissAllNotifications = async () => {
   await Notifications.dismissAllNotificationsAsync();
+};
+
+export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
+  try {
+    const token = await AsyncStorage.getItem('access_token');
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['token'] = token;
+    }
+
+    const response = await fetch('https://www.oncarecancer.com/mobile-app/saveFCMToken', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ fcmToken }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to save FCM token:', await response.text());
+      return false;
+    }
+
+    console.log('FCM token saved successfully');
+    return true;
+  } catch (error) {
+    console.error('Error saving FCM token:', error);
+    return false;
+  }
+};
+
+export const initializeFCMAndSendToken = async () => {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
+  try {
+    const fcmToken = await registerForPushNotifications();
+    if (fcmToken) {
+      await saveFCMTokenToAPI(fcmToken);
+    }
+
+    messaging().onTokenRefresh(async (newToken) => {
+      console.log('FCM Token refreshed:', newToken);
+      await saveFCMTokenToAPI(newToken);
+    });
+
+    messaging().onMessage(async (remoteMessage) => {
+      console.log('FCM message received in foreground:', remoteMessage);
+      if (remoteMessage.notification) {
+        await scheduleLocalNotification(
+          remoteMessage.notification.title || 'Notification',
+          remoteMessage.notification.body || '',
+          remoteMessage.data
+        );
+      }
+    });
+
+    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+      console.log('FCM message received in background:', remoteMessage);
+    });
+  } catch (error) {
+    console.error('Error initializing FCM:', error);
+  }
 };
