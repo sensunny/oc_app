@@ -196,11 +196,6 @@ export default function LoginScreen() {
                       </>
                     )}
                   </View>
-
-                  <View style={styles.testInfo}>
-                    <Text style={styles.testInfoTitle}>Test Credentials</Text>
-                    <Text style={styles.testInfoText}>ID: 8888888888 • OTP: 8888</Text>
-                  </View>
                 </View>
               </BlurView>
             </View>

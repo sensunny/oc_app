@@ -88,7 +88,7 @@ export default function ProfileScreen() {
           <User size={40} color={COLORS.white} />
         </View>
         <Text style={styles.patientName}>{patient?.patient_name}</Text>
-        <Text style={styles.patientId}>ID: {patient?.hospital_id}</Text>
+        <Text style={styles.patientId}>Hospital ID: {patient?.patient_id}</Text>
       </View>
 
       <ScrollView
@@ -100,6 +100,7 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <MenuItem
               icon={User}
+              onPress={() => router.replace('/(tabs)')}
               title="Personal Details"
               subtitle="View and update your information"
             />
@@ -112,7 +113,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section, { display: "none"}}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.card}>
             <MenuItem
@@ -128,7 +129,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={styles.section, { display: "none"}}>
           <Text style={styles.sectionTitle}>Support</Text>
           <View style={styles.card}>
             <MenuItem
@@ -151,7 +152,7 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
           >
             <LogOut size={20} color={COLORS.error} />
-            <Text style={styles.logoutText}>Logout 1</Text>
+            <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
 

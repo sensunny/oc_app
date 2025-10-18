@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Patient, Document, Notification, AuthData } from '../types';
+import { apiRequest } from '@/utils/apiClient';
 
 const API_BASE_URL = 'https://api.example.com';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -162,6 +163,9 @@ export const patientApi = {
 
 export const documentApi = {
   // ---- Get Patient Documents ----
+  getPatientDetails(token: string) {
+    return apiRequest("/getPatientDetails", { token });
+  },
   getPatientDocuments: async (): Promise<any[] | null> => {
     try {
       const token = await AsyncStorage.getItem('access_token');
@@ -170,83 +174,12 @@ export const documentApi = {
         return null;
       }
 
-      const res = await fetch('https://www.oncarecancer.com/mobile-app/getPatientDocuments', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          token,
-        },
-      });
+      const data = await apiRequest("/getPatientDocuments", { token });
 
-      const data = await res.json();
+      // const data = await res.json();
       console.log({data})
-      if (!res.ok) {
-        console.warn('Failed to fetch patient documents:', data.message);
-        return null;
-      }
 
-      return data?.data?.length ? data.data : [
-        {
-          id: '1',
-          patient_id: "_id",
-          title: 'Complete Blood Count Report',
-          description: 'Comprehensive blood analysis showing all vital parameters',
-          document_type: 'Lab Report',
-          file_url: 'https://www.oncarecancer.com/documents/cbc-report.pdf',
-          file_size: 245000,
-          uploaded_by: 'Dr. Michael Smith',
-          uploaded_at: '2025-10-05T10:30:00Z',
-          created_at: '2025-10-05T10:30:00Z',
-        },
-        {
-          id: '2',
-          patient_id: "_id",
-          title: 'Chest X-Ray Analysis',
-          description: 'Digital chest radiograph with detailed findings',
-          document_type: 'Radiology',
-          file_url: 'https://www.oncarecancer.com/documents/chest-xray.pdf',
-          file_size: 1024000,
-          uploaded_by: 'Dr. Emily Johnson',
-          uploaded_at: '2025-10-03T14:20:00Z',
-          created_at: '2025-10-03T14:20:00Z',
-        },
-        {
-          id: '3',
-          patient_id: "_id",
-          title: 'Monthly Prescription',
-          description: 'Current medication schedule and dosage information',
-          document_type: 'Prescription',
-          file_url: 'https://www.oncarecancer.com/documents/prescription.pdf',
-          file_size: 180000,
-          uploaded_by: 'Dr. Robert Williams',
-          uploaded_at: '2025-10-01T09:15:00Z',
-          created_at: '2025-10-01T09:15:00Z',
-        },
-        {
-          id: '4',
-          patient_id: "_id",
-          title: 'MRI Scan Report',
-          description: 'Brain MRI with contrast enhancement',
-          document_type: 'Radiology',
-          file_url: 'https://www.oncarecancer.com/documents/mri-scan.pdf',
-          file_size: 2048000,
-          uploaded_by: 'Dr. Jennifer Davis',
-          uploaded_at: '2025-09-28T16:45:00Z',
-          created_at: '2025-09-28T16:45:00Z',
-        },
-        {
-          id: '5',
-          patient_id: "_id",
-          title: 'Cardiac Health Assessment',
-          description: 'ECG and echocardiogram results',
-          document_type: 'Cardiology',
-          file_url: 'https://www.oncarecancer.com/documents/cardiac-report.pdf',
-          file_size: 456000,
-          uploaded_by: 'Dr. David Martinez',
-          uploaded_at: '2025-09-25T11:00:00Z',
-          created_at: '2025-09-25T11:00:00Z',
-        },
-      ];
+      return data?.data?.length ? data.data : [];
     } catch (error) {
       console.error('Get Patient Documents error:', error);
       return null;

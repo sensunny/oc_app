@@ -75,8 +75,8 @@ export default function DocumentsScreen() {
                 <File size={20} color={getDocTypeColor(document.document_type)} strokeWidth={2.5} />
               </View>
               <View style={styles.documentInfo}>
-                <Text style={styles.documentTitle}>{document.title}</Text>
-                <Text style={styles.documentDescription}>{document.description}</Text>
+                <Text style={styles.documentTitle}>{document.description}</Text>
+                {/* <Text style={styles.documentDescription}>{document.description}</Text> */}
               </View>
             </View>
             <View style={styles.documentDetails}>

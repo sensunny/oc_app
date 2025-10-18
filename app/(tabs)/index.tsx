@@ -30,6 +30,18 @@ export default function HomeScreen() {
     }
   };
 
+  function combineAddress({ address, area, city, state }) {
+    // Create an array of values, filter out empty or undefined values
+    const parts = [address, area, city, state].filter(part => part && part.trim() !== '');
+    // If no parts exist, return an empty string or handle as needed
+    console.log({parts})
+    if (parts.length === 0) {
+      return '-'; // or throw an error if at least one is mandatory
+    }
+    // Join the remaining parts with a comma
+    return parts.join(', ');
+  }
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadPatientData();
@@ -79,7 +91,7 @@ export default function HomeScreen() {
           <Text style={styles.patientName}>{patient.patient_name}</Text>
           <View style={styles.idBadge}>
             <Shield size={12} color={COLORS.white} />
-            <Text style={styles.patientId}>ID: {patient._id}</Text>
+            <Text style={styles.patientId}>Hospital ID: {patient.patient_id}</Text>
           </View>
         </View>
       </View>
@@ -90,7 +102,7 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.quickStatsSection}>
             <View style={styles.quickStatsGrid}>
-              <QuickStatCard icon={Droplet} label="Blood Group" value={"DUMMY"} color="#FF3B30" />
+              {/* <QuickStatCard icon={Droplet} label="Blood Group" value={"DUMMY"} color="#FF3B30" /> */}
               <QuickStatCard icon={Heart} label="Age" value={new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear() + ' yrs'} color="#FF6B9D" />
               <QuickStatCard icon={Calendar} label="Gender" value={patient.gender} color="#5AC8FA" />
             </View>
@@ -102,8 +114,8 @@ export default function HomeScreen() {
               <InfoCard icon={User} label="Full Name" value={patient.patient_name} />
               <InfoCard icon={Calendar} label="Date of Birth" value={new Date(patient.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
               <InfoCard icon={Phone} label="Mobile Number" value={patient.phone_number} />
-              <InfoCard icon={AlertCircle} label="Emergency Contact" value={"-"} />
-              <InfoCard icon={MapPin} label="Address" value={patient.address} />
+              {/* <InfoCard icon={AlertCircle} label="Emergency Contact" value={"-"} /> */}
+              <InfoCard icon={MapPin} label="Address" value={`${combineAddress({...patient})}`} />
             </View>
           </View>
         </View>
