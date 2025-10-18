@@ -9,6 +9,7 @@ interface AuthContextType extends AuthState {
   sendOTP: (identifier: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshPatient: () => Promise<void>;
+  getPatient: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,12 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.success) {
         await AsyncStorage.setItem('access_token', result?.authData?.access_token ?? '');
         await AsyncStorage.removeItem('otp_id');
-        const patientData = await patientApi.getPatientDetails();
-        setAuthState({
-          isAuthenticated: true,
-          loading: false,
-          patient: patientData
-        });
+        await getPatient()
         return true;
       }
       return false;
@@ -90,6 +86,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
   };
+
+  const getPatient = async () => {
+    const patientData = await patientApi.getPatientDetails();
+        setAuthState({
+          isAuthenticated: true,
+          loading: false,
+          patient: patientData
+        });
+
+        return patientData
+  }
+
 
   const logout = async () => {
     try {
@@ -122,7 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         refreshPatient,
-        sendOTP
+        sendOTP,
+        getPatient
       }}
     >
       {children}

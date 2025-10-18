@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FileText, Download, Calendar, User as UserIcon, File, Activity } from 'lucide-react-native';
@@ -6,15 +6,28 @@ import { useAuth } from '../../contexts/AuthContext';
 import { documentApi } from '../../services/api';
 import { Document } from '../../types';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+// import { usePathname } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 export default function DocumentsScreen() {
   const { patient } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
+  // const location = usePathname();
+
+  // useEffect(() => {
+  //   loadDocuments();
+  // }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDocuments();
+    }, [])
+  );
+
 
   const loadDocuments = async () => {
     if (!patient) return;
@@ -65,6 +78,33 @@ export default function DocumentsScreen() {
       Animated.spring(scaleAnim, { toValue: 1, delay: index * 50, tension: 50, friction: 7, useNativeDriver: true }).start();
     }, []);
 
+    const handleDownload = async (fileUrl: string) => {
+      try {
+        console.log("Downloading:", fileUrl);
+    
+        // Extract filename
+        const fileName = fileUrl.split("/").pop() || "downloaded_file";
+    
+        // Reference to app's document directory
+        const directory = FileSystem.documentDirectory; // same as before
+        const file = FileSystem.FileSystemFile.from(directory + fileName);
+    
+        // Download the file using the new API
+        const response = await FileSystem.downloadAsync(fileUrl, file.uri);
+        console.log("Downloaded to:", response.uri);
+    
+        // Share / open file if available
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(response.uri);
+        } else {
+          alert(`File downloaded to: ${response.uri}`);
+        }
+      } catch (error) {
+        console.error("Download failed:", error);
+        alert("Failed to download file.");
+      }
+    };
+
     return (
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <TouchableOpacity style={styles.documentCard} activeOpacity={0.7}>
@@ -93,10 +133,14 @@ export default function DocumentsScreen() {
               <View style={[styles.tagContainer, { backgroundColor: getDocTypeColor(document.document_type) + '15' }]}>
                 <Text style={[styles.tagText, { color: getDocTypeColor(document.document_type) }]}>{document.document_type}</Text>
               </View>
-              <View style={styles.downloadButton}>
+              <TouchableOpacity
+                  style={styles.downloadButton}
+                  onPress={() => handleDownload(document.file_url)}
+                  activeOpacity={0.7}
+                >
                 <Text style={styles.fileSize}>{formatFileSize(document.file_size)}</Text>
                 <Download size={16} color={COLORS.white} />
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
         </TouchableOpacity>

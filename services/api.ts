@@ -162,10 +162,6 @@ export const patientApi = {
 };
 
 export const documentApi = {
-  // ---- Get Patient Documents ----
-  getPatientDetails(token: string) {
-    return apiRequest("/getPatientDetails", { token });
-  },
   getPatientDocuments: async (): Promise<any[] | null> => {
     try {
       const token = await AsyncStorage.getItem('access_token');

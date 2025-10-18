@@ -1,32 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { User, Phone, Calendar, Droplet, MapPin, AlertCircle, Heart, Shield } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { patientApi } from '../../services/api';
 import { Patient } from '../../types';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
+import { useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
   const { patient: authPatient } = useAuth();
-  const [patient, setPatient] = useState<Patient | null>(authPatient);
+  // const [patient, setPatient] = useState<Patient | null>(authPatient);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
 
-  useEffect(() => {
-    loadPatientData();
-  }, [authPatient]);
+  // useEffect(() => {
+  //   loadPatientData();
+  // }, [authPatient]);
+
+  const { patient, logout, getPatient } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPatientData();
+    }, [])
+  );
+  console.log({patient}, "load")
 
   const loadPatientData = async () => {
-    if (authPatient) {
-      try {
-        const data = await patientApi.getPatientDetails();
-        if (data) {
-          setPatient(data);
-        }
-      } catch (error) {
-        console.error('Error loading patient data:', error);
-      }
+    
+    if (!patient) return;
+    try {
+      const docs = await getPatient();
+      console.log({docs})
+      // setDocuments(docs);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      Alert.alert('Error', 'Failed to load documents');
     }
   };
 

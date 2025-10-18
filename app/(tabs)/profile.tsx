@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Linking,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   LogOut,
   User,
@@ -20,10 +21,30 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import { patientApi } from '@/services/api';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { patient, logout } = useAuth();
+  const { patient, logout, getPatient } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPatientData();
+    }, [])
+  );
+
+
+  const loadPatientData = async () => {
+    if (!patient) return;
+    try {
+      const docs = await getPatient();
+      console.log({docs})
+      // setDocuments(docs);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      Alert.alert('Error', 'Failed to load documents');
+    }
+  };
 
   const handleLogout = async () => {
     console.log('22');
@@ -106,8 +127,9 @@ export default function ProfileScreen() {
             />
             <MenuItem
               icon={Phone}
-              title="Contact Number"
-              subtitle={patient?.mobile_number || ''}
+              onPress={() => Linking.openURL(`tel:${patient?.otherData?.oncare_number}`)}
+              title="Oncare Support Number"
+              subtitle={patient?.otherData?.oncare_number || ''}
               showChevron={false}
             />
           </View>
