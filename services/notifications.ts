@@ -1,16 +1,9 @@
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { pushTokenApi } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { firebaseConfig } from '../config/firebase';
-
-let messaging: any = null;
-
-try {
-  messaging = require('@react-native-firebase/messaging').default;
-} catch (error) {
-  console.warn('Firebase messaging not available. Using development build is required for push notifications.');
-}
+import Constants from 'expo-constants';
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -40,19 +33,18 @@ export const initializeNotifications = async (config: NotificationConfig) => {
   }
 
   try {
-    const Device = require('expo-device');
     const token = await registerForPushNotifications();
 
     if (token && config.patientId) {
       const deviceInfo = {
         deviceId: Device.deviceName || 'Unknown',
         platform: Platform.OS,
-        osVersion: Device.osVersion,
-        brand: Device.brand,
-        modelName: Device.modelName,
+        osVersion: Device.osVersion || 'Unknown',
+        brand: Device.brand || 'Unknown',
+        modelName: Device.modelName || 'Unknown',
       };
 
-      await pushTokenApi.registerToken(config.patientId, token, deviceInfo);
+      await saveExpoTokenToAPI(token);
     }
 
     cleanupListeners();
@@ -83,41 +75,40 @@ export const initializeNotifications = async (config: NotificationConfig) => {
 
 export const registerForPushNotifications = async (): Promise<string | null> => {
   if (Platform.OS === 'web') {
-    return null;
-  }
-
-  if (!messaging) {
-    console.warn('Firebase messaging not available. Build the app with EAS to use push notifications.');
+    console.log('Push notifications not supported on web');
     return null;
   }
 
   try {
-    const Device = require('expo-device');
     if (!Device.isDevice) {
       console.log('Must use physical device for Push Notifications');
       return null;
     }
 
-    const authStatus = await messaging().requestPermission();
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
 
-    if (!enabled) {
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
       console.log('Failed to get push notification permissions');
       return null;
     }
 
-    if (Platform.OS === 'ios') {
-      await messaging().registerDeviceForRemoteMessages();
-      const apnsToken = await messaging().getAPNSToken();
-      if (apnsToken) {
-        console.log('APNS Token:', apnsToken);
-      }
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+
+    if (!projectId) {
+      console.warn('Project ID not found. Using fallback token generation.');
     }
 
-    const fcmToken = await messaging().getToken();
-    console.log('FCM Token:', fcmToken);
+    const token = (await Notifications.getExpoPushTokenAsync({
+      projectId: projectId,
+    })).data;
+
+    console.log('Expo Push Token:', token);
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -137,7 +128,7 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
       });
     }
 
-    return fcmToken;
+    return token;
   } catch (error) {
     console.error('Error registering for push notifications:', error);
     return null;
@@ -192,7 +183,7 @@ export const dismissAllNotifications = async () => {
   await Notifications.dismissAllNotificationsAsync();
 };
 
-export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
+export const saveExpoTokenToAPI = async (expoToken: string): Promise<boolean> => {
   try {
     const token = await AsyncStorage.getItem('access_token');
     const headers: HeadersInit = {
@@ -206,58 +197,34 @@ export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
     const response = await fetch('https://www.oncarecancer.com/mobile-app/saveFCMToken', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ fcmToken }),
+      body: JSON.stringify({ fcmToken: expoToken }),
     });
 
     if (!response.ok) {
-      console.error('Failed to save FCM token:', await response.text());
+      console.error('Failed to save Expo push token:', await response.text());
       return false;
     }
 
-    console.log('FCM token saved successfully');
+    console.log('Expo push token saved successfully');
     return true;
   } catch (error) {
-    console.error('Error saving FCM token:', error);
+    console.error('Error saving Expo push token:', error);
     return false;
   }
 };
 
-export const initializeFCMAndSendToken = async () => {
+export const initializeExpoNotifications = async () => {
   if (Platform.OS === 'web') {
     return;
   }
 
-  if (!messaging) {
-    console.warn('Firebase messaging not available. Skipping FCM initialization.');
-    return;
-  }
-
   try {
-    const fcmToken = await registerForPushNotifications();
-    if (fcmToken) {
-      await saveFCMTokenToAPI(fcmToken);
+    const expoToken = await registerForPushNotifications();
+    if (expoToken) {
+      await saveExpoTokenToAPI(expoToken);
+      console.log('Expo notifications initialized successfully');
     }
-
-    messaging().onTokenRefresh(async (newToken) => {
-      console.log('FCM Token refreshed:', newToken);
-      await saveFCMTokenToAPI(newToken);
-    });
-
-    messaging().onMessage(async (remoteMessage) => {
-      console.log('FCM message received in foreground:', remoteMessage);
-      if (remoteMessage.notification) {
-        await scheduleLocalNotification(
-          remoteMessage.notification.title || 'Notification',
-          remoteMessage.notification.body || '',
-          remoteMessage.data
-        );
-      }
-    });
-
-    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-      console.log('FCM message received in background:', remoteMessage);
-    });
   } catch (error) {
-    console.error('Error initializing FCM:', error);
+    console.error('Error initializing Expo notifications:', error);
   }
 };
