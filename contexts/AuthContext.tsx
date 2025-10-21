@@ -27,11 +27,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuthStatus = async () => {
     try {
-      const patientData = await AsyncStorage.getItem('patient');
-      if (patientData) {
+      const token = await AsyncStorage.getItem('access_token');
+      if (token) {
+        const patientData = await patientApi.getPatientDetails();
         setAuthState({
           isAuthenticated: true,
-          patient: null,
+          patient: patientData,
           loading: false,
         });
       } else {
@@ -42,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (error) {
+      console.error('Auth check error:', error);
       setAuthState({
         isAuthenticated: false,
         patient: null,
@@ -104,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await patientApi.logout();
       if (result.success) {
         cleanupListeners();
+        await AsyncStorage.removeItem('access_token');
         await AsyncStorage.removeItem('patient');
         setAuthState({
           isAuthenticated: false,
