@@ -8,7 +8,16 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.oncare.patientmanagementapp",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification",
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "bundler": "metro",
@@ -30,16 +39,8 @@
       }
     },
     "android": {
-      "package": "com.sensunny.patientmanagementapp",
+      "package": "com.oncare.patientmanagementapp",
       "googleServicesFile": "./google-services.json"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.sensunny.patientmanagementapp",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
-      }
     }
   }
 }
