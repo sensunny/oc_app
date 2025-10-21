@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { initializeNotifications, initializeFCMAndSendToken } from '../services/notifications';
+import { initializeNotifications, initializeExpoNotifications } from '../services/notifications';
 
 function RootLayoutNav() {
   const { isAuthenticated, loading, patient } = useAuth();
@@ -12,7 +12,7 @@ function RootLayoutNav() {
   const [navigationReady, setNavigationReady] = useState(false);
 
   useEffect(() => {
-    initializeFCMAndSendToken();
+    initializeExpoNotifications();
   }, []);
 
   useEffect(() => {
