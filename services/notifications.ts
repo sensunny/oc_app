@@ -1,9 +1,16 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { pushTokenApi } from './api';
-import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from '../config/firebase';
+
+let messaging: any = null;
+
+try {
+  messaging = require('@react-native-firebase/messaging').default;
+} catch (error) {
+  console.warn('Firebase messaging not available. Using development build is required for push notifications.');
+}
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -76,6 +83,11 @@ export const initializeNotifications = async (config: NotificationConfig) => {
 
 export const registerForPushNotifications = async (): Promise<string | null> => {
   if (Platform.OS === 'web') {
+    return null;
+  }
+
+  if (!messaging) {
+    console.warn('Firebase messaging not available. Build the app with EAS to use push notifications.');
     return null;
   }
 
@@ -212,6 +224,11 @@ export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
 
 export const initializeFCMAndSendToken = async () => {
   if (Platform.OS === 'web') {
+    return;
+  }
+
+  if (!messaging) {
+    console.warn('Firebase messaging not available. Skipping FCM initialization.');
     return;
   }
 
