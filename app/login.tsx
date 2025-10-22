@@ -64,14 +64,13 @@ export default function LoginScreen() {
 
     console.log("handleOPT", {identifier})
     const success = await sendOTP(identifier);
-    console.log("errro", {success})
-
-    if (success) {
+    if (success && success === "true") {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       setStep('otp');
+      Alert.alert('Success', `OTP Send Successfully to ${identifier}`);
     } else {
-      Alert.alert('Invalid Input');
+      Alert.alert(success);
     }
   };
 
