@@ -1,6 +1,4 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { pushTokenApi } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let messaging: any = null;
@@ -13,26 +11,13 @@ try {
   console.warn('Firebase messaging module not available. This is expected in Expo Go.');
 }
 
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
-}
-
 export interface NotificationConfig {
   patientId?: string;
-  onNotificationReceived?: (notification: Notifications.Notification) => void;
-  onNotificationResponse?: (response: Notifications.NotificationResponse) => void;
+  onNotificationReceived?: (notification: any) => void;
+  onNotificationResponse?: (response: any) => void;
 }
 
-let notificationListeners: {
-  received?: Notifications.Subscription;
-  response?: Notifications.Subscription;
-} = {};
+let unsubscribeForeground: (() => void) | null = null;
 
 export const initializeNotifications = async (config: NotificationConfig) => {
   if (Platform.OS === 'web') {
@@ -40,39 +25,25 @@ export const initializeNotifications = async (config: NotificationConfig) => {
     return null;
   }
 
+  if (!messaging) {
+    console.warn('Firebase messaging not available. Build with EAS to use FCM push notifications.');
+    return null;
+  }
+
   try {
-    const Device = require('expo-device');
     const token = await registerForPushNotifications();
 
-    if (token && config.patientId) {
-      const deviceInfo = {
-        deviceId: Device.deviceName || 'Unknown',
-        platform: Platform.OS,
-        osVersion: Device.osVersion,
-        brand: Device.brand,
-        modelName: Device.modelName,
-      };
-
+    if (token) {
       await saveFCMTokenToAPI(token);
     }
 
     cleanupListeners();
 
     if (config.onNotificationReceived) {
-      notificationListeners.received = Notifications.addNotificationReceivedListener(
-        config.onNotificationReceived
-      );
-    }
-
-    if (config.onNotificationResponse) {
-      notificationListeners.response = Notifications.addNotificationResponseReceivedListener(
-        config.onNotificationResponse
-      );
-    }
-
-    const lastNotificationResponse = await Notifications.getLastNotificationResponseAsync();
-    if (lastNotificationResponse && config.onNotificationResponse) {
-      config.onNotificationResponse(lastNotificationResponse);
+      unsubscribeForeground = messaging().onMessage(async (remoteMessage: any) => {
+        console.log('Notification received in foreground:', remoteMessage);
+        config.onNotificationReceived?.(remoteMessage);
+      });
     }
 
     return token;
@@ -93,12 +64,6 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
   }
 
   try {
-    const Device = require('expo-device');
-    if (!Device.isDevice) {
-      console.log('Must use physical device for Push Notifications');
-      return null;
-    }
-
     const authStatus = await messaging().requestPermission();
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -120,24 +85,6 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
     const fcmToken = await messaging().getToken();
     console.log('FCM Token:', fcmToken);
 
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#20606B',
-      });
-
-      await Notifications.setNotificationChannelAsync('document_upload', {
-        name: 'Document Uploads',
-        description: 'Notifications for new document uploads',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#20606B',
-        sound: 'default',
-      });
-    }
-
     return fcmToken;
   } catch (error) {
     console.error('Error registering for push notifications:', error);
@@ -145,52 +92,45 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
   }
 };
 
-export const scheduleLocalNotification = async (
-  title: string,
-  body: string,
-  data?: Record<string, any>
-) => {
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        data,
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-        categoryIdentifier: data?.type || 'default',
-      },
-      trigger: null,
-    });
-  } catch (error) {
-    console.error('Error scheduling notification:', error);
-  }
-};
-
 export const cleanupListeners = () => {
-  if (notificationListeners.received) {
-    notificationListeners.received.remove();
+  if (unsubscribeForeground) {
+    unsubscribeForeground();
+    unsubscribeForeground = null;
   }
-  if (notificationListeners.response) {
-    notificationListeners.response.remove();
-  }
-  notificationListeners = {};
 };
 
 export const getBadgeCount = async (): Promise<number> => {
-  return await Notifications.getBadgeCountAsync();
+  if (!messaging) return 0;
+
+  try {
+    if (Platform.OS === 'ios') {
+      const badge = await messaging().getBadge();
+      return badge || 0;
+    }
+  } catch (error) {
+    console.error('Error getting badge count:', error);
+  }
+  return 0;
 };
 
 export const setBadgeCount = async (count: number) => {
-  await Notifications.setBadgeCountAsync(count);
+  if (!messaging) return;
+
+  try {
+    if (Platform.OS === 'ios') {
+      await messaging().setBadge(count);
+    }
+  } catch (error) {
+    console.error('Error setting badge count:', error);
+  }
 };
 
 export const clearBadge = async () => {
-  await Notifications.setBadgeCountAsync(0);
+  await setBadgeCount(0);
 };
 
 export const dismissAllNotifications = async () => {
-  await Notifications.dismissAllNotificationsAsync();
+  console.log('Dismiss notifications not implemented for FCM');
 };
 
 export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
@@ -246,13 +186,6 @@ export const initializeFCMAndSendToken = async () => {
 
     messaging().onMessage(async (remoteMessage: any) => {
       console.log('FCM message received in foreground:', remoteMessage);
-      if (remoteMessage.notification) {
-        await scheduleLocalNotification(
-          remoteMessage.notification.title || 'Notification',
-          remoteMessage.notification.body || '',
-          remoteMessage.data
-        );
-      }
     });
 
     messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
