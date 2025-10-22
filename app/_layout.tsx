@@ -36,7 +36,7 @@ function RootLayoutNav() {
         onNotificationReceived: (notification) => {
           console.log('Notification received (foreground):', notification);
         },
-        onNotificationResponse: (response) => {
+        onNotificationOpened: (response) => {
           console.log('Notification clicked:', response);
 
           if (response.notification.request.content.data?.type === 'document_upload') {
