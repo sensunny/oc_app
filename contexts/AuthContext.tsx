@@ -6,7 +6,7 @@ import { cleanupListeners } from '../services/notifications';
 
 interface AuthContextType extends AuthState {
   login: (identifier: string, otp: string) => Promise<boolean>;
-  sendOTP: (identifier: string) => Promise<boolean>;
+  sendOTP: (identifier: string) => Promise<string>;
   logout: () => Promise<void>;
   refreshPatient: () => Promise<void>;
   getPatient: () => Promise<void>;
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendOTP = async (identifier: string): Promise<boolean> => {
+  const sendOTP = async (identifier: string): Promise<string> => {
     try {
       const result = await patientApi.sendOTP(identifier);
   
@@ -60,14 +60,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Store OTP ID for later use during verification
         await AsyncStorage.setItem('otp_id', result.otp_id);
         console.log('OTP sent successfully:', result.message);
-        return true;
+        return 'true';
       }
   
       console.warn('Send OTP failed:', result.message);
-      return false;
+      return result.message;
     } catch (error) {
       console.error('Send OTP error:', error);
-      return false;
+      return error;
     }
   };
 

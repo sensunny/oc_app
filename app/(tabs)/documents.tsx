@@ -8,7 +8,7 @@ import { Document } from '../../types';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 // import { usePathname } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
 export default function DocumentsScreen() {
@@ -82,22 +82,23 @@ export default function DocumentsScreen() {
       try {
         console.log("Downloading:", fileUrl);
 
+        // Extract file name from URL
         const fileName = fileUrl.split("/").pop() || "downloaded_file";
+
+        // Local file path
         const fileUri = FileSystem.documentDirectory + fileName;
 
+        // Download the file
         const downloadResult = await FileSystem.downloadAsync(fileUrl, fileUri);
-        console.log("Downloaded to:", downloadResult.uri);
 
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(downloadResult.uri);
-        } else {
-          Alert.alert('Success', `File downloaded to: ${downloadResult.uri}`);
-        }
+        console.log("Downloaded to:", downloadResult.uri);
+        Alert.alert('Success', `File downloaded to:\n${downloadResult.uri}`);
       } catch (error) {
         console.error("Download failed:", error);
         Alert.alert('Error', 'Failed to download file. Please try again.');
       }
     };
+
 
     return (
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
