@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { initializeNotifications, initializeFCMAndSendToken } from '../services/notifications';
+
+SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { isAuthenticated, loading, patient } = useAuth();
@@ -29,6 +32,8 @@ function RootLayoutNav() {
     } else if (isAuthenticated && patient && !inAuthGroup) {
       router.replace('/(tabs)');
     }
+
+    SplashScreen.hideAsync();
   }, [isAuthenticated, loading, patient, segments]);
 
   useEffect(() => {
