@@ -62,6 +62,8 @@ export const initializeNotifications = async (config: NotificationConfig) => {
       messageUnsubscribe = messaging().onMessage(async (remoteMessage: any) => {
         console.log('FCM message received in foreground:', remoteMessage);
 
+        // Only display notification if we're in a build (not Expo Go)
+        // In Expo Go, notifications come through Expo push system
         await Notifications.scheduleNotificationAsync({
           content: {
             title: remoteMessage.notification?.title || 'Notification',
@@ -224,26 +226,12 @@ export const initializeFCMAndSendToken = async () => {
   }
 
   try {
-    // Set up Firebase message handlers but don't get token yet
-    // Token will be obtained when user logs in via initializeNotifications
-
+    // Set up Firebase token refresh handler only
+    // Message handlers are set up in initializeNotifications to avoid duplicates
     if (messaging) {
       messaging().onTokenRefresh(async (newToken: string) => {
         console.log('FCM Token refreshed:', newToken);
         await saveFCMTokenToAPI(newToken);
-      });
-
-      messaging().onMessage(async (remoteMessage: any) => {
-        console.log('FCM message received in foreground:', remoteMessage);
-
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: remoteMessage.notification?.title || 'Notification',
-            body: remoteMessage.notification?.body || '',
-            data: remoteMessage.data,
-          },
-          trigger: null,
-        });
       });
 
       messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {

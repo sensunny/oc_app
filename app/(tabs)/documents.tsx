@@ -81,27 +81,21 @@ export default function DocumentsScreen() {
     const handleDownload = async (fileUrl: string) => {
       try {
         console.log("Downloading:", fileUrl);
-    
-        // Extract filename
+
         const fileName = fileUrl.split("/").pop() || "downloaded_file";
-    
-        // Reference to app's document directory
-        const directory = FileSystem.documentDirectory; // same as before
-        const file = FileSystem.FileSystemFile.from(directory + fileName);
-    
-        // Download the file using the new API
-        const response = await FileSystem.downloadAsync(fileUrl, file.uri);
-        console.log("Downloaded to:", response.uri);
-    
-        // Share / open file if available
+        const fileUri = FileSystem.documentDirectory + fileName;
+
+        const downloadResult = await FileSystem.downloadAsync(fileUrl, fileUri);
+        console.log("Downloaded to:", downloadResult.uri);
+
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(response.uri);
+          await Sharing.shareAsync(downloadResult.uri);
         } else {
-          alert(`File downloaded to: ${response.uri}`);
+          Alert.alert('Success', `File downloaded to: ${downloadResult.uri}`);
         }
       } catch (error) {
         console.error("Download failed:", error);
-        alert("Failed to download file.");
+        Alert.alert('Error', 'Failed to download file. Please try again.');
       }
     };
 
