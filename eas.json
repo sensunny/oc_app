@@ -30,7 +30,7 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk"
       },
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production"
