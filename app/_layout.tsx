@@ -22,7 +22,7 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(tabs)';
 
-    if (!isAuthenticated && inAuthGroup) {
+    if ((!isAuthenticated && inAuthGroup) || !patient) {
       router.replace('/login');
     } else if (isAuthenticated && !inAuthGroup && segments[0] !== 'login') {
       router.replace('/(tabs)');
