@@ -22,12 +22,14 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(tabs)';
 
-    if ((!isAuthenticated && inAuthGroup) || !patient) {
-      router.replace('/login');
-    } else if (isAuthenticated && !inAuthGroup && segments[0] !== 'login') {
+    if (!isAuthenticated || !patient) {
+      if (inAuthGroup || segments[0] !== 'login') {
+        router.replace('/login');
+      }
+    } else if (isAuthenticated && patient && !inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, loading]);
+  }, [isAuthenticated, loading, patient, segments]);
 
   useEffect(() => {
     if (isAuthenticated && patient) {
@@ -39,7 +41,17 @@ function RootLayoutNav() {
         onNotificationOpened: (response) => {
           console.log('Notification clicked:', response);
 
-          if (response.notification.request.content.data?.type === 'document_upload') {
+          const title = response.notification.request.content.title?.toLowerCase() || '';
+          const body = response.notification.request.content.body?.toLowerCase() || '';
+          const combinedText = title + ' ' + body;
+
+          if (
+            combinedText.includes('document') ||
+            combinedText.includes('report') ||
+            combinedText.includes('prescription')
+          ) {
+            router.push('/(tabs)/documents');
+          } else if (response.notification.request.content.data?.type === 'document_upload') {
             router.push('/(tabs)/documents');
           }
         },

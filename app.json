@@ -7,6 +7,11 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "https://www.oncarecancer.com/img/featured/2025-10-22%2C10%3A26%3A10.122Z-logo%20%283%29.png",
+    "notification": {
+      "icon": "https://www.oncarecancer.com/img/featured/2025-10-22%2C10%3A26%3A10.122Z-logo%20%283%29.png",
+      "color": "#20606B"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.oncare.patientmanagementapp",
