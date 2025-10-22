@@ -1,3 +1,5 @@
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -11,13 +13,23 @@ try {
   console.warn('Firebase messaging module not available. This is expected in Expo Go.');
 }
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
 export interface NotificationConfig {
   patientId?: string;
-  onNotificationReceived?: (notification: any) => void;
-  onNotificationResponse?: (response: any) => void;
+  onNotificationReceived?: (notification: Notifications.Notification) => void;
+  onNotificationOpened?: (response: Notifications.NotificationResponse) => void;
 }
 
-let unsubscribeForeground: (() => void) | null = null;
+let notificationListener: Notifications.Subscription | null = null;
+let responseListener: Notifications.Subscription | null = null;
+let messageUnsubscribe: (() => void) | null = null;
 
 export const initializeNotifications = async (config: NotificationConfig) => {
   if (Platform.OS === 'web') {
@@ -25,24 +37,39 @@ export const initializeNotifications = async (config: NotificationConfig) => {
     return null;
   }
 
-  if (!messaging) {
-    console.warn('Firebase messaging not available. Build with EAS to use FCM push notifications.');
-    return null;
-  }
-
   try {
     const token = await registerForPushNotifications();
 
-    if (token) {
+    if (token && config.patientId) {
       await saveFCMTokenToAPI(token);
     }
 
     cleanupListeners();
 
     if (config.onNotificationReceived) {
-      unsubscribeForeground = messaging().onMessage(async (remoteMessage: any) => {
-        console.log('Notification received in foreground:', remoteMessage);
-        config.onNotificationReceived?.(remoteMessage);
+      notificationListener = Notifications.addNotificationReceivedListener(
+        config.onNotificationReceived
+      );
+    }
+
+    if (config.onNotificationOpened) {
+      responseListener = Notifications.addNotificationResponseReceivedListener(
+        config.onNotificationOpened
+      );
+    }
+
+    if (messaging) {
+      messageUnsubscribe = messaging().onMessage(async (remoteMessage: any) => {
+        console.log('FCM message received in foreground:', remoteMessage);
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification?.title || 'Notification',
+            body: remoteMessage.notification?.body || '',
+            data: remoteMessage.data,
+          },
+          trigger: null,
+        });
       });
     }
 
@@ -58,34 +85,57 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
     return null;
   }
 
-  if (!messaging) {
-    console.warn('Firebase messaging not available. Build with EAS to use FCM push notifications.');
-    return null;
-  }
-
   try {
-    const authStatus = await messaging().requestPermission();
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    if (!Device.isDevice) {
+      console.log('Must use physical device for Push Notifications');
+      return null;
+    }
 
-    if (!enabled) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
       console.log('Failed to get push notification permissions');
       return null;
     }
 
-    if (Platform.OS === 'ios') {
-      await messaging().registerDeviceForRemoteMessages();
-      const apnsToken = await messaging().getAPNSToken();
-      if (apnsToken) {
-        console.log('APNS Token:', apnsToken);
+    let token: string | undefined;
+
+    if (messaging) {
+      if (Platform.OS === 'ios') {
+        await messaging().registerDeviceForRemoteMessages();
+        const apnsToken = await messaging().getAPNSToken();
+        if (apnsToken) {
+          console.log('APNS Token:', apnsToken);
+        }
       }
+
+      const fcmToken = await messaging().getToken();
+      console.log('FCM Token:', fcmToken);
+      token = fcmToken;
+    } else {
+      const expoPushToken = await Notifications.getExpoPushTokenAsync({
+        projectId: 'b941d44b-470f-44c6-b02d-c3c64fe38ea3',
+      });
+      console.log('Expo Push Token:', expoPushToken.data);
+      token = expoPushToken.data;
     }
 
-    const fcmToken = await messaging().getToken();
-    console.log('FCM Token:', fcmToken);
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
 
-    return fcmToken;
+    return token || null;
   } catch (error) {
     console.error('Error registering for push notifications:', error);
     return null;
@@ -93,33 +143,32 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
 };
 
 export const cleanupListeners = () => {
-  if (unsubscribeForeground) {
-    unsubscribeForeground();
-    unsubscribeForeground = null;
+  if (notificationListener) {
+    Notifications.removeNotificationSubscription(notificationListener);
+    notificationListener = null;
+  }
+  if (responseListener) {
+    Notifications.removeNotificationSubscription(responseListener);
+    responseListener = null;
+  }
+  if (messageUnsubscribe) {
+    messageUnsubscribe();
+    messageUnsubscribe = null;
   }
 };
 
 export const getBadgeCount = async (): Promise<number> => {
-  if (!messaging) return 0;
-
   try {
-    if (Platform.OS === 'ios') {
-      const badge = await messaging().getBadge();
-      return badge || 0;
-    }
+    return await Notifications.getBadgeCountAsync();
   } catch (error) {
     console.error('Error getting badge count:', error);
+    return 0;
   }
-  return 0;
 };
 
 export const setBadgeCount = async (count: number) => {
-  if (!messaging) return;
-
   try {
-    if (Platform.OS === 'ios') {
-      await messaging().setBadge(count);
-    }
+    await Notifications.setBadgeCountAsync(count);
   } catch (error) {
     console.error('Error setting badge count:', error);
   }
@@ -127,10 +176,6 @@ export const setBadgeCount = async (count: number) => {
 
 export const clearBadge = async () => {
   await setBadgeCount(0);
-};
-
-export const dismissAllNotifications = async () => {
-  console.log('Dismiss notifications not implemented for FCM');
 };
 
 export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
@@ -168,29 +213,35 @@ export const initializeFCMAndSendToken = async () => {
     return;
   }
 
-  if (!messaging) {
-    console.warn('Firebase messaging not available. Build with EAS to use FCM push notifications.');
-    return;
-  }
-
   try {
-    const fcmToken = await registerForPushNotifications();
-    if (fcmToken) {
-      await saveFCMTokenToAPI(fcmToken);
+    const token = await registerForPushNotifications();
+    if (token) {
+      await saveFCMTokenToAPI(token);
     }
 
-    messaging().onTokenRefresh(async (newToken: string) => {
-      console.log('FCM Token refreshed:', newToken);
-      await saveFCMTokenToAPI(newToken);
-    });
+    if (messaging) {
+      messaging().onTokenRefresh(async (newToken: string) => {
+        console.log('FCM Token refreshed:', newToken);
+        await saveFCMTokenToAPI(newToken);
+      });
 
-    messaging().onMessage(async (remoteMessage: any) => {
-      console.log('FCM message received in foreground:', remoteMessage);
-    });
+      messaging().onMessage(async (remoteMessage: any) => {
+        console.log('FCM message received in foreground:', remoteMessage);
 
-    messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
-      console.log('FCM message received in background:', remoteMessage);
-    });
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification?.title || 'Notification',
+            body: remoteMessage.notification?.body || '',
+            data: remoteMessage.data,
+          },
+          trigger: null,
+        });
+      });
+
+      messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
+        console.log('FCM message received in background:', remoteMessage);
+      });
+    }
   } catch (error) {
     console.error('Error initializing FCM:', error);
   }
