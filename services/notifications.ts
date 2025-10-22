@@ -38,13 +38,13 @@ export const initializeNotifications = async (config: NotificationConfig) => {
   }
 
   try {
+    cleanupListeners();
+
     const token = await registerForPushNotifications();
 
     if (token && config.patientId) {
       await saveFCMTokenToAPI(token);
     }
-
-    cleanupListeners();
 
     if (config.onNotificationReceived) {
       notificationListener = Notifications.addNotificationReceivedListener(
@@ -144,11 +144,11 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
 
 export const cleanupListeners = () => {
   if (notificationListener) {
-    Notifications.removeNotificationSubscription(notificationListener);
+    notificationListener.remove();
     notificationListener = null;
   }
   if (responseListener) {
-    Notifications.removeNotificationSubscription(responseListener);
+    responseListener.remove();
     responseListener = null;
   }
   if (messageUnsubscribe) {
@@ -180,14 +180,22 @@ export const clearBadge = async () => {
 
 export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
   try {
+    if (!fcmToken) {
+      console.warn('No FCM token to save');
+      return false;
+    }
+
     const token = await AsyncStorage.getItem('access_token');
+
+    if (!token) {
+      console.warn('No access token available, skipping FCM token save');
+      return false;
+    }
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      'token': token,
     };
-
-    if (token) {
-      headers['token'] = token;
-    }
 
     const response = await fetch('https://www.oncarecancer.com/mobile-app/saveFCMToken', {
       method: 'POST',
@@ -196,11 +204,13 @@ export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
     });
 
     if (!response.ok) {
-      console.error('Failed to save FCM token:', await response.text());
+      const errorText = await response.text();
+      console.error('Failed to save FCM token:', errorText);
       return false;
     }
 
-    console.log('FCM token saved successfully');
+    const result = await response.json();
+    console.log('FCM token saved successfully:', result);
     return true;
   } catch (error) {
     console.error('Error saving FCM token:', error);
@@ -214,10 +224,8 @@ export const initializeFCMAndSendToken = async () => {
   }
 
   try {
-    const token = await registerForPushNotifications();
-    if (token) {
-      await saveFCMTokenToAPI(token);
-    }
+    // Set up Firebase message handlers but don't get token yet
+    // Token will be obtained when user logs in via initializeNotifications
 
     if (messaging) {
       messaging().onTokenRefresh(async (newToken: string) => {
