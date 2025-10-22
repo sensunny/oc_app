@@ -2,14 +2,19 @@
   "expo": {
     "name": "Patient Management",
     "slug": "oncarecancer",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "icon": "https://www.oncarecancer.com/img/featured/2025-10-22%2C10%3A26%3A10.122Z-logo%20%283%29.png",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#20606B"
+    },
     "notification": {
-      "icon": "https://www.oncarecancer.com/img/featured/2025-10-22%2C10%3A26%3A10.122Z-logo%20%283%29.png",
+      "icon": "./assets/images/icon.png",
       "color": "#20606B"
     },
     "ios": {
@@ -18,9 +23,6 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "UIBackgroundModes": [
-          "remote-notification",
-          "remote-notification",
-          "remote-notification",
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -46,9 +48,18 @@
       }
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "package": "com.oncare.patientmanagementapp",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#20606B"
+      },
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "DOWNLOAD_WITHOUT_NOTIFICATION"
+      ]
     },
     "owner": "oncarecancer-app",
     "runtimeVersion": "1.0.0",
