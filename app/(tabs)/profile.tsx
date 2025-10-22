@@ -47,8 +47,8 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    console.log('22');
-    await logout();
+    // console.log('22');
+    // await logout();
     // router.replace('/login');
     Alert.alert(
       'Logout',
