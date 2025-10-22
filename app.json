@@ -13,6 +13,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#20606B"
     },
+    "androidStatusBar": {
+      "backgroundColor": "#20606B",
+      "barStyle": "light-content"
+    },
     "notification": {
       "icon": "./assets/images/icon.png",
       "color": "#20606B"
@@ -21,6 +25,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.oncare.patientmanagementapp",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "splash": {
+        "image": "./assets/images/icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#20606B"
+      },
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
@@ -54,6 +63,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#20606B"
+      },
+      "splash": {
+        "image": "./assets/images/icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#20606B",
+        "mdpi": "./assets/images/icon.png",
+        "hdpi": "./assets/images/icon.png",
+        "xhdpi": "./assets/images/icon.png",
+        "xxhdpi": "./assets/images/icon.png",
+        "xxxhdpi": "./assets/images/icon.png"
       },
       "permissions": [
         "READ_EXTERNAL_STORAGE",
