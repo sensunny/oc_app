@@ -35,7 +35,9 @@
       "env": {
         "APP_ENV": "preview",
         "EXPO_NO_DOTENV": "1",
-        "FLIPPER_DISABLE": "1"
+        "FLIPPER_DISABLE": "1",
+        "GRADLE_OPTS": "-Dorg.gradle.workers.max=2",
+        "ORG_GRADLE_PROJECT_org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
       },
       "prebuildCommand": "prebuild --skip-dependency-update react",
       "cache": {
