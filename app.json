@@ -62,7 +62,7 @@
       "bundleIdentifier": "com.oncare.patientmanagementapp",
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
-        "image": "./assets/images/splash-4096-4096.png",
+        "image": "./assets/new_images/splash-4096-4096.png",
         "resizeMode": "cover",
         "backgroundColor": "#ffffff"
       },
