@@ -31,6 +31,9 @@ let notificationListener: Notifications.Subscription | null = null;
 let responseListener: Notifications.Subscription | null = null;
 let messageUnsubscribe: (() => void) | null = null;
 
+// Track if we're using Expo Go or standalone build
+const isExpoGo = !messaging;
+
 export const initializeNotifications = async (config: NotificationConfig) => {
   if (Platform.OS === 'web') {
     console.log('Notifications not supported on web');
@@ -58,17 +61,25 @@ export const initializeNotifications = async (config: NotificationConfig) => {
       );
     }
 
-    if (messaging) {
+    // Only set up FCM foreground handler in standalone builds
+    // In Expo Go, notifications come through Expo push system only
+    if (messaging && !isExpoGo) {
       messageUnsubscribe = messaging().onMessage(async (remoteMessage: any) => {
         console.log('FCM message received in foreground:', remoteMessage);
 
-        // Only display notification if we're in a build (not Expo Go)
-        // In Expo Go, notifications come through Expo push system
+        // Check if this is a duplicate by comparing with recent notifications
+        const isDuplicate = await checkDuplicateNotification(remoteMessage);
+        if (isDuplicate) {
+          console.log('Skipping duplicate notification');
+          return;
+        }
+
+        // Display notification for FCM messages in standalone builds
         await Notifications.scheduleNotificationAsync({
           content: {
             title: remoteMessage.notification?.title || 'Notification',
             body: remoteMessage.notification?.body || '',
-            data: remoteMessage.data,
+            data: remoteMessage.data || {},
           },
           trigger: null,
         });
@@ -108,7 +119,9 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
 
     let token: string | undefined;
 
-    if (messaging) {
+    // In Expo Go, always use Expo push tokens
+    // In standalone builds, use FCM tokens
+    if (messaging && !isExpoGo) {
       if (Platform.OS === 'ios') {
         await messaging().registerDeviceForRemoteMessages();
         const apnsToken = await messaging().getAPNSToken();
@@ -141,6 +154,43 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
   } catch (error) {
     console.error('Error registering for push notifications:', error);
     return null;
+  }
+};
+
+// Helper function to check for duplicate notifications
+const checkDuplicateNotification = async (remoteMessage: any): Promise<boolean> => {
+  try {
+    const now = Date.now();
+    const messageId = remoteMessage.messageId || 
+                     remoteMessage.data?.messageId || 
+                     `${remoteMessage.notification?.title}-${remoteMessage.notification?.body}`;
+    
+    // Store recent notification IDs to avoid duplicates
+    const recentNotifications = await AsyncStorage.getItem('recent_notifications');
+    const notifications: Array<{id: string, timestamp: number}> = recentNotifications ? 
+      JSON.parse(recentNotifications) : [];
+    
+    // Clean old entries (older than 10 seconds)
+    const filteredNotifications = notifications.filter(
+      n => now - n.timestamp < 10000
+    );
+    
+    // Check if this is a duplicate
+    const isDuplicate = filteredNotifications.some(n => n.id === messageId);
+    
+    if (!isDuplicate) {
+      // Add to recent notifications
+      filteredNotifications.push({ id: messageId, timestamp: now });
+      await AsyncStorage.setItem(
+        'recent_notifications', 
+        JSON.stringify(filteredNotifications.slice(-20)) // Keep last 20
+      );
+    }
+    
+    return isDuplicate;
+  } catch (error) {
+    console.error('Error checking duplicate notification:', error);
+    return false;
   }
 };
 
@@ -228,7 +278,7 @@ export const initializeFCMAndSendToken = async () => {
   try {
     // Set up Firebase token refresh handler only
     // Message handlers are set up in initializeNotifications to avoid duplicates
-    if (messaging) {
+    if (messaging && !isExpoGo) {
       messaging().onTokenRefresh(async (newToken: string) => {
         console.log('FCM Token refreshed:', newToken);
         await saveFCMTokenToAPI(newToken);
@@ -236,6 +286,7 @@ export const initializeFCMAndSendToken = async () => {
 
       messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
         console.log('FCM message received in background:', remoteMessage);
+        // Background messages are handled automatically by the system
       });
     }
   } catch (error) {

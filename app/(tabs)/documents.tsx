@@ -8,8 +8,9 @@ import { Document } from '../../types';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 // import { usePathname } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
+import { Linking } from 'react-native';
+
+
 
 export default function DocumentsScreen() {
   const { patient } = useAuth();
@@ -33,7 +34,6 @@ export default function DocumentsScreen() {
     if (!patient) return;
     try {
       const docs = await documentApi.getPatientDocuments();
-      console.log({docs})
       setDocuments(docs);
     } catch (error) {
       console.error('Error loading documents:', error);
@@ -79,25 +79,23 @@ export default function DocumentsScreen() {
     }, []);
 
     const handleDownload = async (fileUrl: string) => {
-      try {
-        console.log("Downloading:", fileUrl);
+  if (!fileUrl) {
+    Alert.alert('Error', 'Missing file URL');
+    return;
+  }
 
-        // Extract file name from URL
-        const fileName = fileUrl.split("/").pop() || "downloaded_file";
-
-        // Local file path
-        const fileUri = FileSystem.documentDirectory + fileName;
-
-        // Download the file
-        const downloadResult = await FileSystem.downloadAsync(fileUrl, fileUri);
-
-        console.log("Downloaded to:", downloadResult.uri);
-        Alert.alert('Success', `File downloaded to:\n${downloadResult.uri}`);
-      } catch (error) {
-        console.error("Download failed:", error);
-        Alert.alert('Error', 'Failed to download file. Please try again.');
-      }
-    };
+  try {
+    const supported = await Linking.canOpenURL(fileUrl);
+    if (supported) {
+      await Linking.openURL(fileUrl);
+    } else {
+      Alert.alert('Error', `Cannot open this URL: ${fileUrl}`);
+    }
+  } catch (err: any) {
+    console.error('Open URL error:', err);
+    Alert.alert('Error', 'Failed to open link');
+  }
+};
 
 
     return (
