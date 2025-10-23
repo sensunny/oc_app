@@ -21,13 +21,49 @@
       "icon": "./assets/new_images/icon-1024-1024.png",
       "color": "#ffffff"
     },
+    "android": {
+      "versionCode": 3,
+      "package": "com.oncare.patientmanagementapp",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/new_images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "splash": {
+        "image": "./assets/new_images/splash-4096-4096.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#ffffff",
+        "mdpi": "./assets/new_images/splash-4096-4096.png",
+        "hdpi": "./assets/new_images/splash-4096-4096.png",
+        "xhdpi": "./assets/new_images/splash-4096-4096.png",
+        "xxhdpi": "./assets/new_images/splash-4096-4096.png",
+        "xxxhdpi": "./assets/new_images/splash-4096-4096.png"
+      },
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "DOWNLOAD_WITHOUT_NOTIFICATION"
+      ],
+      "config": {
+        "googleServices": {
+          "disableVersionCheck": false
+        }
+      },
+      "manifest": {
+        "metaData": {
+          "com.google.firebase.messaging.default_notification_color": {
+            "resource": "@color/notification_icon_color"
+          }
+        }
+      }
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.oncare.patientmanagementapp",
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
         "image": "./assets/images/splash-4096-4096.png",
-        "resizeMode": "contain",
+        "resizeMode": "cover",
         "backgroundColor": "#ffffff"
       },
       "infoPlist": {
@@ -53,42 +89,6 @@
       "router": {},
       "eas": {
         "projectId": "fcf640f1-4ef7-4fdf-abe0-cdd3e913ccb9"
-      }
-    },
-    "android": {
-      "versionCode": 3,
-      "package": "com.oncare.patientmanagementapp",
-      "googleServicesFile": "./google-services.json",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/new_images/icon-1024-1024.png",
-        "backgroundColor": "#ffffff"
-      },
-      "splash": {
-        "image": "./assets/new_images/splash-4096-4096.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#ffffff",
-        "mdpi": "./assets/new_images/splash-4096-4096.png",
-        "hdpi": "./assets/new_images/splash-4096-4096.png",
-        "xhdpi": "./assets/new_images/splash-4096-4096.png",
-        "xxhdpi": "./assets/new_images/splash-4096-4096.png",
-        "xxxhdpi": "./assets/new_images/splash-4096-4096.png"
-      },
-      "permissions": [
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "DOWNLOAD_WITHOUT_NOTIFICATION"
-      ],
-      "config": {
-        "googleServices": {
-          "disableVersionCheck": false
-        }
-      },
-      "manifest": {
-        "metaData": {
-          "com.google.firebase.messaging.default_notification_color": {
-            "resource": "@color/notification_icon_color"
-          }
-        }
       }
     },
     "owner": "oncarecancer-app",
