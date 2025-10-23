@@ -19,7 +19,7 @@
     },
     "notification": {
       "icon": "./assets/new_images/icon-1024-1024.png",
-      "color": "#20606B"
+      "color": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
@@ -28,7 +28,7 @@
       "splash": {
         "image": "./assets/images/icon.png",
         "resizeMode": "cover",
-        "backgroundColor": "#20606B"
+        "backgroundColor": "#ffffff"
       },
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
