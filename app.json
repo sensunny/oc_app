@@ -7,18 +7,18 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/new_images/icon-1024-1024.png",
     "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#20606B"
+      "image": "./assets/new_images/splash-4096-4096.png",
+      "contentFit": "cover",
+      "backgroundColor": "#ffffff"
     },
     "androidStatusBar": {
       "backgroundColor": "#20606B",
       "barStyle": "light-content"
     },
     "notification": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/new_images/icon-1024-1024.png",
       "color": "#20606B"
     },
     "ios": {
@@ -27,13 +27,11 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
         "image": "./assets/images/icon.png",
-        "resizeMode": "contain",
+        "resizeMode": "cover",
         "backgroundColor": "#20606B"
       },
       "infoPlist": {
-        "UIBackgroundModes": [
-          "remote-notification"
-        ],
+        "UIBackgroundModes": ["remote-notification"],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -45,7 +43,8 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "@react-native-firebase/app"
+      "@react-native-firebase/app",
+      "./plugins/withAndroidManifestFix"
     ],
     "experiments": {
       "typedRoutes": true
@@ -61,24 +60,36 @@
       "package": "com.oncare.patientmanagementapp",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/new_images/icon-1024-1024.png",
         "backgroundColor": "#20606B"
       },
       "splash": {
-        "image": "./assets/images/icon.png",
-        "resizeMode": "contain",
+        "image": "./assets/new_images/splash-4096-4096.png",
+        "resizeMode": "cover",
         "backgroundColor": "#20606B",
-        "mdpi": "./assets/images/icon.png",
-        "hdpi": "./assets/images/icon.png",
-        "xhdpi": "./assets/images/icon.png",
-        "xxhdpi": "./assets/images/icon.png",
-        "xxxhdpi": "./assets/images/icon.png"
+        "mdpi": "./assets/new_images/splash-4096-4096.png",
+        "hdpi": "./assets/new_images/splash-4096-4096.png",
+        "xhdpi": "./assets/new_images/splash-4096-4096.png",
+        "xxhdpi": "./assets/new_images/splash-4096-4096.png",
+        "xxxhdpi": "./assets/new_images/splash-4096-4096.png"
       },
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "DOWNLOAD_WITHOUT_NOTIFICATION"
-      ]
+      ],
+      "config": {
+        "googleServices": {
+          "disableVersionCheck": false
+        }
+      },
+      "manifest": {
+        "metaData": {
+          "com.google.firebase.messaging.default_notification_color": {
+            "resource": "@color/notification_icon_color"
+          }
+        }
+      }
     },
     "owner": "oncarecancer-app",
     "runtimeVersion": "1.0.0",

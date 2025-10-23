@@ -68,7 +68,7 @@ export default function LoginScreen() {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       setStep('otp');
-      Alert.alert('Success', `OTP Send Successfully to ${identifier}`);
+      // Alert.alert('Success', `OTP Send Successfully to ${identifier}`);
     } else {
       Alert.alert(success);
     }
@@ -169,7 +169,6 @@ export default function LoginScreen() {
                           placeholder="Enter your ID or mobile"
                           keyboardType="phone-pad"
                           error={errors.identifier}
-                          autoFocus
                         />
                         <Button title="Continue" onPress={handleSendOtp} />
                       </>
@@ -183,7 +182,6 @@ export default function LoginScreen() {
                           keyboardType="number-pad"
                           maxLength={4}
                           error={errors.otp}
-                          autoFocus
                         />
                         <Button title="Verify & Login" onPress={handleVerifyOtp} loading={loading} />
                         <Button
