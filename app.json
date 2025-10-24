@@ -31,13 +31,8 @@
       },
       "splash": {
         "image": "./assets/new_images/splash-4096-4096.png",
-        "resizeMode": "cover",
-        "backgroundColor": "#ffffff",
-        "mdpi": "./assets/new_images/splash-4096-4096.png",
-        "hdpi": "./assets/new_images/splash-4096-4096.png",
-        "xhdpi": "./assets/new_images/splash-4096-4096.png",
-        "xxhdpi": "./assets/new_images/splash-4096-4096.png",
-        "xxxhdpi": "./assets/new_images/splash-4096-4096.png"
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff"
       },
       "permissions": [
         "READ_EXTERNAL_STORAGE",
@@ -63,7 +58,7 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
         "image": "./assets/new_images/splash-4096-4096.png",
-        "resizeMode": "cover",
+        "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       },
       "infoPlist": {
