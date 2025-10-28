@@ -10,16 +10,16 @@
     "icon": "./assets/new_images/icon-1024-1024.png",
     "splash": {
       "image": "./assets/new_images/splash-4096-4096.png",
-      "contentFit": "cover",
-      "backgroundColor": "#ffffff"
+      "contentFit": "contain",
+      "backgroundColor": "#262f82"
     },
     "androidStatusBar": {
-      "backgroundColor": "#20606B",
+      "backgroundColor": "#262f82",
       "barStyle": "light-content"
     },
     "notification": {
       "icon": "./assets/new_images/icon-1024-1024.png",
-      "color": "#ffffff"
+      "color": "#262f82"
     },
     "android": {
       "versionCode": 3,
@@ -27,12 +27,12 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/new_images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#262f82"
       },
       "splash": {
         "image": "./assets/new_images/splash-4096-4096.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#262f82"
       },
       "permissions": [
         "READ_EXTERNAL_STORAGE",
@@ -59,7 +59,7 @@
       "splash": {
         "image": "./assets/new_images/splash-4096-4096.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#262f82"
       },
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"],
