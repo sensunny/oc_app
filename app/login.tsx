@@ -61,11 +61,11 @@ export default function LoginScreen() {
   const handleSendOtp = async () => {
     setErrors({ identifier: '', otp: '' });
     if (!identifier.trim()) {
-      setErrors({ identifier: 'Please enter Hospital ID or Mobile Number', otp: '' });
+      setErrors({ identifier: 'Please enter Mobile Number', otp: '' });
       return;
     }
     if (identifier.length < 8) {
-      setErrors({ identifier: 'Please enter a valid Hospital ID or Mobile Number', otp: '' });
+      setErrors({ identifier: 'Please enter a valid Mobile Number', otp: '' });
       return;
     }
     const success = await sendOTP(identifier);
@@ -160,10 +160,10 @@ export default function LoginScreen() {
                     {step === 'identifier' ? (
                       <>
                         <Input
-                          label="Hospital ID / Mobile Number"
+                          label="Mobile Number"
                           value={identifier}
                           onChangeText={setIdentifier}
-                          placeholder="Enter your ID or mobile"
+                          placeholder="Enter your mobile number"
                           keyboardType="phone-pad"
                           error={errors.identifier}
                         />
@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+    backgroundColor:"#fff"
   },
   blurCard: {
     borderRadius: 28,
