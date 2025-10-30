@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { User, Users, Phone, Calendar, MapPin, Heart, Shield, VenusAndMars } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,6 +8,7 @@ import { useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
   const { patient, getPatient } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
 
@@ -20,11 +21,13 @@ export default function HomeScreen() {
   const loadPatientData = async () => {
     if (!patient) return;
     try {
+      setLoading(true);
       await getPatient();
     } catch (error) {
       console.error('Error loading documents:', error);
       Alert.alert('Error', 'Failed to load documents');
     }
+    setLoading(false);
   };
 
   function combineAddress({ address, area, city, state }) {
@@ -38,6 +41,16 @@ export default function HomeScreen() {
     await loadPatientData();
     setRefreshing(false);
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 10, color: COLORS.text }}>Loading patient data...</Text>
+      </View>
+    );
+  }
+
 
   if (!patient) {
     return (
@@ -141,7 +154,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.lg,
-    zIndex: 1,
+    zIndex: 0,
   },
   logoSmallContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -152,7 +165,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   logoSmall: { width: 100, height: 32 },
-  welcomeSection: { marginTop: SPACING.sm },
+  welcomeSection: { marginTop: SPACING.sm, zIndex: 0 },
   welcomeText: { fontSize: FONT_SIZES.md, color: 'rgba(255,255,255,0.9)', marginBottom: 4 },
   patientName: { fontSize: FONT_SIZES.xxxl, fontWeight: '800', color: COLORS.white, marginBottom: SPACING.sm, letterSpacing: -0.5 },
   idBadge: {
@@ -172,7 +185,7 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
   quickStatsSection: { marginTop: -40, marginBottom: SPACING.lg },
-  quickStatsGrid: { flexDirection: 'row', gap: SPACING.md },
+  quickStatsGrid: { flexDirection: 'row', gap: SPACING.md, zIndex: 4 },
   quickStatCard: {
     flex: 1,
     backgroundColor: COLORS.white,
