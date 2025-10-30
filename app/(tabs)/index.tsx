@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
   const { patient, getPatient } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
 
@@ -21,6 +21,7 @@ export default function HomeScreen() {
   const loadPatientData = async () => {
     if (!patient) return;
     try {
+      setLoading(true);
       await getPatient();
     } catch (error) {
       console.error('Error loading documents:', error);
