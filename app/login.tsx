@@ -21,6 +21,15 @@ import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 
+// Brand palette
+const BRAND = {
+  color1: '#20606b', // teal-blue
+  color2: '#262f82', // deep blue
+  color3: '#9966ff', // violet
+  color4: '#cc66ff', // light purple
+  color5: '#dfedf6', // soft pale
+};
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, sendOTP } = useAuth();
@@ -51,24 +60,19 @@ export default function LoginScreen() {
 
   const handleSendOtp = async () => {
     setErrors({ identifier: '', otp: '' });
-
     if (!identifier.trim()) {
       setErrors({ identifier: 'Please enter Hospital ID or Mobile Number', otp: '' });
       return;
     }
-
     if (identifier.length < 8) {
       setErrors({ identifier: 'Please enter a valid Hospital ID or Mobile Number', otp: '' });
       return;
     }
-
-    console.log("handleOPT", {identifier})
     const success = await sendOTP(identifier);
-    if (success && success === "true") {
+    if (success && success === 'true') {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       setStep('otp');
-      // Alert.alert('Success', `OTP Send Successfully to ${identifier}`);
     } else {
       Alert.alert(success);
     }
@@ -76,23 +80,17 @@ export default function LoginScreen() {
 
   const handleVerifyOtp = async () => {
     setErrors({ identifier: '', otp: '' });
-
     if (!otp.trim()) {
       setErrors({ identifier: '', otp: 'Please enter OTP' });
       return;
     }
-
     if (otp.length !== 4) {
       setErrors({ identifier: '', otp: 'OTP must be 4 digits' });
       return;
     }
-
     setLoading(true);
-
     const success = await login(identifier, otp);
-
     setLoading(false);
-
     if (success) {
       router.replace('/(tabs)');
     } else {
@@ -110,13 +108,15 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      {/* 3D gradient background */}
       <LinearGradient
-        colors={['#20606B', '#262F82']}
+        colors={[BRAND.color1, BRAND.color2, BRAND.color3]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
+      {/* Floating color circles for 3D feel */}
       <View style={styles.circleContainer}>
         <View style={[styles.circle, styles.circle1]} />
         <View style={[styles.circle, styles.circle2]} />
@@ -135,27 +135,24 @@ export default function LoginScreen() {
           <Animated.View
             style={[
               styles.content,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
+            {/* Logo */}
             <View style={styles.logoContainer}>
-              <View style={styles.logoWrapper}>
-                <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
-              </View>
+              <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
             </View>
 
+            {/* Glassmorphic card */}
             <View style={styles.cardContainer}>
-              <BlurView intensity={20} tint="light" style={styles.blurCard}>
+              <BlurView intensity={50} tint="light" style={styles.blurCard}>
                 <View style={styles.card}>
                   <Text style={styles.title}>
                     {step === 'identifier' ? 'Welcome Back' : 'Verify OTP'}
                   </Text>
                   <Text style={styles.subtitle}>
                     {step === 'identifier'
-                      ? 'Sign in to access your medical records with oncare'
+                      ? 'Sign in to access your medical records with OnCare'
                       : `We sent a code to ${identifier}`}
                   </Text>
 
@@ -170,7 +167,14 @@ export default function LoginScreen() {
                           keyboardType="phone-pad"
                           error={errors.identifier}
                         />
-                        <Button title="Continue" onPress={handleSendOtp} />
+                        <LinearGradient
+                          colors={[BRAND.color1, BRAND.color2]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.gradientButton}
+                        >
+                          <Button title="Continue" onPress={handleSendOtp} transparent />
+                        </LinearGradient>
                       </>
                     ) : (
                       <>
@@ -183,7 +187,20 @@ export default function LoginScreen() {
                           maxLength={4}
                           error={errors.otp}
                         />
-                        <Button title="Verify & Login" onPress={handleVerifyOtp} loading={loading} />
+                        <LinearGradient
+                          colors={[BRAND.color1, BRAND.color2]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.gradientButton}
+                        >
+                          <Button
+                            title="Verify & Login"
+                            onPress={handleVerifyOtp}
+                            loading={loading}
+                            transparent
+                          />
+                        </LinearGradient>
+
                         <Button
                           title="Change Number"
                           onPress={handleBack}
@@ -204,9 +221,9 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+
+  // Depth circles
   circleContainer: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
@@ -214,59 +231,48 @@ const styles = StyleSheet.create({
   circle: {
     position: 'absolute',
     borderRadius: 1000,
-    opacity: 0.1,
+    opacity: 0.25,
   },
   circle1: {
     width: 400,
     height: 400,
     backgroundColor: '#9966ff',
     top: -100,
-    right: -100,
+    right: -120,
   },
   circle2: {
     width: 300,
     height: 300,
     backgroundColor: '#cc66ff',
-    bottom: -50,
-    left: -50,
+    bottom: -80,
+    left: -80,
   },
   circle3: {
-    width: 200,
-    height: 200,
+    width: 220,
+    height: 220,
     backgroundColor: '#dfedf6',
     top: '40%',
     right: -100,
   },
-  keyboardView: {
-    flex: 1,
-  },
+
+  keyboardView: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: SPACING.lg,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  content: { flex: 1, justifyContent: 'center' },
+
   logoContainer: {
     alignItems: 'center',
     marginBottom: SPACING.xxl,
-  },
-  logoWrapper: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: SPACING.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
   },
   logo: {
     width: 160,
     height: 60,
   },
+
+  // Glass card
   cardContainer: {
     borderRadius: 28,
     overflow: 'hidden',
@@ -279,49 +285,40 @@ const styles = StyleSheet.create({
   blurCard: {
     borderRadius: 28,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 28,
     padding: SPACING.xl,
   },
+
   title: {
     fontSize: FONT_SIZES.xxxl,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: BRAND.color2,
     marginBottom: SPACING.sm,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
+    color: BRAND.color2,
     marginBottom: SPACING.xl,
     lineHeight: 22,
   },
-  formContainer: {
-    marginBottom: SPACING.lg,
+
+  formContainer: { marginBottom: SPACING.lg },
+  hospitalId:{
+    color: BRAND.color2
+  },
+
+  gradientButton: {
+    borderRadius: 14,
+    padding: 2,
+    marginTop: SPACING.md,
+    elevation: 8,
   },
   backButton: {
     marginTop: SPACING.md,
-  },
-  testInfo: {
-    marginTop: SPACING.lg,
-    paddingTop: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    alignItems: 'center',
-  },
-  testInfoTitle: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '700',
-    color: COLORS.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: SPACING.xs,
-  },
-  testInfoText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
+    color: "#ffffff"
   },
 });

@@ -69,7 +69,8 @@ export default function DocumentsScreen() {
       'Prescription': '#34C759',
       'Cardiology': '#FF6B9D',
     };
-    return colors[type] || COLORS.primary;
+    return COLORS.accent1
+    // return colors[type] || COLORS.primary;
   };
 
   const DocumentCard = ({ document, index }: { document: Document; index: number }) => {
@@ -143,9 +144,9 @@ export default function DocumentsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#20606B', '#262F82']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground} />
+      <LinearGradient colors={['#20606b', '#262f82', '#9966ff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground} />
       <View style={styles.header}>
-        <Activity size={32} color={COLORS.white} strokeWidth={2.5} />
+        <File size={32} color={COLORS.white} strokeWidth={2.5} />
         <Text style={styles.headerTitle}>Medical Documents</Text>
         <Text style={styles.headerSubtitle}>
           {documents.length} document{documents.length !== 1 ? 's' : ''} available
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
   headerBackground: { position: 'absolute', top: 0, left: 0, right: 0, height: 200 },
   header: { paddingTop: 60, paddingBottom: SPACING.xl, paddingHorizontal: SPACING.lg, gap: SPACING.sm },
-  headerTitle: { fontSize: FONT_SIZES.xxxl, fontWeight: '800', color: COLORS.white, letterSpacing: -0.5 },
+  headerTitle: { fontSize: FONT_SIZES.xxl, fontWeight: '600', color: COLORS.white, letterSpacing: -0.5 },
   headerSubtitle: { fontSize: FONT_SIZES.sm, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
   scrollView: { flex: 1, marginTop: -20 },
   documentsContainer: { padding: SPACING.lg, paddingTop: SPACING.xl },
@@ -184,11 +185,11 @@ const styles = StyleSheet.create({
   documentHeader: { flexDirection: 'row', marginBottom: SPACING.md },
   iconContainer: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: SPACING.md },
   documentInfo: { flex: 1 },
-  documentTitle: { fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
-  documentDescription: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  documentTitle: { fontSize: FONT_SIZES.md, fontWeight: '700', color: COLORS.secondary, marginBottom: 4 },
+  documentDescription: { fontSize: FONT_SIZES.sm, color: COLORS.secondary },
   documentDetails: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  detailText: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary },
+  detailText: { fontSize: FONT_SIZES.xs, color: COLORS.secondary },
   documentFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   tagContainer: { paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: 12 },
   tagText: { fontSize: FONT_SIZES.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -197,5 +198,5 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: SPACING.xxl * 2 },
   emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.lg },
   emptyStateText: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: COLORS.textPrimary, marginTop: SPACING.lg },
-  emptyStateSubtext: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: SPACING.sm, textAlign: 'center' },
+  emptyStateSubtext: { fontSize: FONT_SIZES.sm, color: COLORS.secondary, marginTop: SPACING.sm, textAlign: 'center' },
 });

@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: COLORS.secondary,
     marginBottom: SPACING.xs,
   },
   input: {
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md,
     fontSize: FONT_SIZES.md,
-    color: COLORS.textPrimary,
+    color: COLORS.secondary,
     minHeight: 56,
   },
   inputError: {
