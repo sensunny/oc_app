@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { patientApi } from '@/services/api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -104,6 +105,12 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <LinearGradient
+            colors={[COLORS.primary, COLORS.secondary, COLORS.accent1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
         <View style={styles.avatarContainer}>
           <User size={40} color={COLORS.white} />
         </View>
@@ -192,8 +199,6 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-      backgroundImage: 'linear-gradient(115.894deg, rgb(32, 96, 107), rgb(38, 47, 130), rgb(153, 102, 255))',
-
     paddingTop: 60,
     paddingBottom: SPACING.xl,
     alignItems: 'center',
