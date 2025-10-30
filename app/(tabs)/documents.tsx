@@ -120,7 +120,7 @@ export default function DocumentsScreen() {
               </View>
               <View style={styles.detailRow}>
                 <UserIcon size={12} color={COLORS.textSecondary} />
-                <Text style={styles.detailText}>{document.uploaded_by}</Text>
+                <Text style={styles.detailText}>{document.uploaded_by?.split("@")[1]}</Text>
               </View>
             </View>
             <View style={styles.documentFooter}>
