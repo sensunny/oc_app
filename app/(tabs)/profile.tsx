@@ -188,10 +188,12 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.lightBlue,
+    backgroundColor: COLORS.lightGray,
   },
   header: {
     backgroundColor: COLORS.primary,
+      backgroundImage: 'linear-gradient(115.894deg, rgb(32, 96, 107), rgb(38, 47, 130), rgb(153, 102, 255))',
+
     paddingTop: 60,
     paddingBottom: SPACING.xl,
     alignItems: 'center',
@@ -200,7 +202,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,
@@ -214,6 +216,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.white,
     opacity: 0.8,
+    fontWeight: '700',
     marginTop: SPACING.xs,
   },
   scrollView: {
@@ -251,7 +254,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: COLORS.lightBlue,
+    backgroundColor: COLORS.lightGray,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,

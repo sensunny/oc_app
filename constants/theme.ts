@@ -34,4 +34,5 @@ export const FONT_SIZES = {
   xxxl: 40,
 };
 
-export const LOGO_URL = 'https://www.oncarecancer.com/images/logo.png';
+// export const LOGO_URL = 'https://www.oncarecancer.com/img/featured/2025-10-30%2C10%3A46%3A28.778Z-logo%201.png';
+export const LOGO_URL = "https://www.oncarecancer.com/img/featured/2025-10-30%2C10%3A52%3A46.595Z-logo%201.png"

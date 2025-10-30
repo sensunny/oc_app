@@ -1,39 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Phone, Calendar, Droplet, MapPin, AlertCircle, Heart, Shield } from 'lucide-react-native';
+import { User, Users, Phone, Calendar, MapPin, Heart, Shield, VenusAndMars } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { patientApi } from '../../services/api';
-import { Patient } from '../../types';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
-  const { patient: authPatient } = useAuth();
-  // const [patient, setPatient] = useState<Patient | null>(authPatient);
+  const { patient, getPatient } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
-
-  // useEffect(() => {
-  //   loadPatientData();
-  // }, [authPatient]);
-
-  const { patient, logout, getPatient } = useAuth();
 
   useFocusEffect(
     useCallback(() => {
       loadPatientData();
     }, [])
   );
-  console.log({patient}, "load")
 
   const loadPatientData = async () => {
-    
     if (!patient) return;
     try {
-      const docs = await getPatient();
-      console.log({docs})
-      // setDocuments(docs);
+      await getPatient();
     } catch (error) {
       console.error('Error loading documents:', error);
       Alert.alert('Error', 'Failed to load documents');
@@ -41,14 +28,8 @@ export default function HomeScreen() {
   };
 
   function combineAddress({ address, area, city, state }) {
-    // Create an array of values, filter out empty or undefined values
     const parts = [address, area, city, state].filter(part => part && part.trim() !== '');
-    // If no parts exist, return an empty string or handle as needed
-    console.log({parts})
-    if (parts.length === 0) {
-      return '-'; // or throw an error if at least one is mandatory
-    }
-    // Join the remaining parts with a comma
+    if (parts.length === 0) return '-';
     return parts.join(', ');
   }
 
@@ -79,7 +60,7 @@ export default function HomeScreen() {
   const InfoCard = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
     <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
       <View style={styles.iconContainer}>
-        <Icon size={20} color={COLORS.primary} strokeWidth={2.5} />
+        <Icon size={20} color="#20606b" strokeWidth={2.5} />
       </View>
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -90,7 +71,12 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#20606B', '#262F82']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground} />
+      <LinearGradient
+        colors={['#20606b', '#262f82', '#9966ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerBackground}
+      />
 
       <View style={styles.headerContent}>
         <View style={styles.logoSmallContainer}>
@@ -100,21 +86,24 @@ export default function HomeScreen() {
           <Text style={styles.welcomeText}>Welcome back,</Text>
           <Text style={styles.patientName}>{patient.patient_name}</Text>
           <View style={styles.idBadge}>
-            <Shield size={12} color={COLORS.white} />
+            <Shield size={14} color="#20606b" strokeWidth={3} />
             <Text style={styles.patientId}>Hospital ID: {patient.patient_id}</Text>
           </View>
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.headerSpacer} />
 
         <View style={styles.content}>
           <View style={styles.quickStatsSection}>
             <View style={styles.quickStatsGrid}>
-              {/* <QuickStatCard icon={Droplet} label="Blood Group" value={"DUMMY"} color="#FF3B30" /> */}
-              <QuickStatCard icon={Heart} label="Age" value={new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear() + ' yrs'} color="#FF6B9D" />
-              <QuickStatCard icon={Calendar} label="Gender" value={patient.gender} color="#5AC8FA" />
+              <QuickStatCard icon={Users} label="Age" value={new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear() + ' yrs'} color="#9966ff" />
+              <QuickStatCard icon={VenusAndMars} label="Gender" value={patient.gender} color="#262f82" />
             </View>
           </View>
 
@@ -122,10 +111,17 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>Personal Details</Text>
             <View style={styles.cardsContainer}>
               <InfoCard icon={User} label="Full Name" value={patient.patient_name} />
-              <InfoCard icon={Calendar} label="Date of Birth" value={new Date(patient.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
+              <InfoCard
+                icon={Calendar}
+                label="Date of Birth"
+                value={new Date(patient.date_of_birth).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              />
               <InfoCard icon={Phone} label="Mobile Number" value={patient.phone_number} />
-              {/* <InfoCard icon={AlertCircle} label="Emergency Contact" value={"-"} /> */}
-              <InfoCard icon={MapPin} label="Address" value={`${combineAddress({...patient})}`} />
+              <InfoCard icon={MapPin} label="Address" value={`${combineAddress({ ...patient })}`} />
             </View>
           </View>
         </View>
@@ -135,32 +131,89 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: COLORS.lightGray }, // brand light background
   headerBackground: { position: 'absolute', top: 0, left: 0, right: 0, height: 280 },
-  headerContent: { position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 60, paddingHorizontal: SPACING.lg, paddingBottom: SPACING.lg, zIndex: 1 },
-  logoSmallContainer: { backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 12, padding: SPACING.sm, alignSelf: 'flex-start', marginBottom: SPACING.md, zIndex: -1 },
+  headerContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 60,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
+    zIndex: 1,
+  },
+  logoSmallContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: SPACING.sm,
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.md,
+    zIndex: -1,
+  },
   logoSmall: { width: 100, height: 32 },
   welcomeSection: { marginTop: SPACING.sm },
-  welcomeText: { fontSize: FONT_SIZES.md, color: 'rgba(255, 255, 255, 0.9)', marginBottom: 4 },
+  welcomeText: { fontSize: FONT_SIZES.md, color: 'rgba(255,255,255,0.9)', marginBottom: 4 },
   patientName: { fontSize: FONT_SIZES.xxxl, fontWeight: '800', color: COLORS.white, marginBottom: SPACING.sm, letterSpacing: -0.5 },
-  idBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: 20, alignSelf: 'flex-start', gap: SPACING.xs },
-  patientId: { fontSize: FONT_SIZES.sm, color: COLORS.white, fontWeight: '600' },
+  idBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dfedf6',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: '#20606b',
+  },
+  patientId: { fontSize: FONT_SIZES.sm, color: '#20606b', fontWeight: '700' },
   headerSpacer: { height: 300 },
   scrollView: { flex: 1 },
-  content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl,backgroundColor: COLORS.white },
+  content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
   quickStatsSection: { marginTop: -40, marginBottom: SPACING.lg },
   quickStatsGrid: { flexDirection: 'row', gap: SPACING.md },
-  quickStatCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: SPACING.md, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
+  quickStatCard: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: SPACING.md,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
   quickStatIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.sm },
-  quickStatValue: { fontSize: FONT_SIZES.xl, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 2 },
-  quickStatLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, textAlign: 'center' },
+  quickStatValue: { fontSize: FONT_SIZES.xl, fontWeight: '800', color: '#20606b', marginBottom: 2 },
+  quickStatLabel: { fontSize: FONT_SIZES.xs, color: '#262f82', textAlign: 'center' },
   section: { marginBottom: SPACING.lg },
-  sectionTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#20606b', marginBottom: SPACING.md },
   cardsContainer: { gap: SPACING.sm },
-  infoCard: { backgroundColor: COLORS.white, borderRadius: 16, padding: SPACING.md, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  iconContainer: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F0F7F9', alignItems: 'center', justifyContent: 'center', marginRight: SPACING.md },
+  infoCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#dfedf6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
   infoContent: { flex: 1 },
-  infoLabel: { fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginBottom: 2, fontWeight: '500' },
-  infoValue: { fontSize: FONT_SIZES.md, color: COLORS.textPrimary, fontWeight: '600' },
+  infoLabel: { fontSize: FONT_SIZES.xs, color: '#262f82', marginBottom: 2, fontWeight: '500' },
+  infoValue: { fontSize: FONT_SIZES.md, color: '#20606b', fontWeight: '600' },
   errorText: { fontSize: FONT_SIZES.md, color: COLORS.error, textAlign: 'center', marginTop: SPACING.xxl },
 });
