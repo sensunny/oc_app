@@ -144,7 +144,7 @@ export default function DocumentsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#20606b', '#262f82', '#9966ff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground} />
+      <LinearGradient colors={['#20206b', '#262f82', '#9966ff']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground} />
       <View style={styles.header}>
         <File size={32} color={COLORS.white} strokeWidth={2.5} />
         <Text style={styles.headerTitle}>Medical Documents</Text>

@@ -73,7 +73,7 @@ export default function HomeScreen() {
   const InfoCard = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
     <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
       <View style={styles.iconContainer}>
-        <Icon size={20} color="#20606b" strokeWidth={2.5} />
+        <Icon size={20} color="#20206b" strokeWidth={2.5} />
       </View>
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -85,7 +85,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#20606b', '#262f82', '#9966ff']}
+        colors={['#20206b', '#262f82', '#9966ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerBackground}
@@ -99,7 +99,7 @@ export default function HomeScreen() {
           <Text style={styles.welcomeText}>Welcome back,</Text>
           <Text style={styles.patientName}>{patient.patient_name}</Text>
           <View style={styles.idBadge}>
-            <Shield size={14} color="#20606b" strokeWidth={3} />
+            <Shield size={14} color="#20206b" strokeWidth={3} />
             <Text style={styles.patientId}>Hospital ID: {patient.patient_id}</Text>
           </View>
         </View>
@@ -178,9 +178,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: SPACING.xs,
     borderWidth: 1,
-    borderColor: '#20606b',
+    borderColor: '#20206b',
   },
-  patientId: { fontSize: FONT_SIZES.sm, color: '#20606b', fontWeight: '700' },
+  patientId: { fontSize: FONT_SIZES.sm, color: '#20206b', fontWeight: '700' },
   headerSpacer: { height: 300 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
@@ -199,10 +199,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   quickStatIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.sm },
-  quickStatValue: { fontSize: FONT_SIZES.xl, fontWeight: '800', color: '#20606b', marginBottom: 2 },
+  quickStatValue: { fontSize: FONT_SIZES.xl, fontWeight: '800', color: '#20206b', marginBottom: 2 },
   quickStatLabel: { fontSize: FONT_SIZES.xs, color: '#262f82', textAlign: 'center' },
   section: { marginBottom: SPACING.lg },
-  sectionTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#20606b', marginBottom: SPACING.md },
+  sectionTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#20206b', marginBottom: SPACING.md },
   cardsContainer: { gap: SPACING.sm },
   infoCard: {
     backgroundColor: COLORS.white,
@@ -227,6 +227,6 @@ const styles = StyleSheet.create({
   },
   infoContent: { flex: 1 },
   infoLabel: { fontSize: FONT_SIZES.xs, color: '#262f82', marginBottom: 2, fontWeight: '500' },
-  infoValue: { fontSize: FONT_SIZES.md, color: '#20606b', fontWeight: '600' },
+  infoValue: { fontSize: FONT_SIZES.md, color: '#20206b', fontWeight: '600' },
   errorText: { fontSize: FONT_SIZES.md, color: COLORS.error, textAlign: 'center', marginTop: SPACING.xxl },
 });
