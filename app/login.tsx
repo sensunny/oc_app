@@ -23,7 +23,7 @@ const { width } = Dimensions.get('window');
 
 // Brand palette
 const BRAND = {
-  color1: '#20606b', // teal-blue
+  color1: '#20206b', // teal-blue
   color2: '#262f82', // deep blue
   color3: '#9966ff', // violet
   color4: '#cc66ff', // light purple
