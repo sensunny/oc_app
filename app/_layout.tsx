@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { View, Image, StyleSheet } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import Toast from 'react-native-toast-message';
+
 import { initializeNotifications, initializeFCMAndSendToken, cleanupListeners } from '../services/notifications';
 
 // === CONFIG: Change this URL to your dynamic splash image ===
@@ -193,6 +195,7 @@ export default function RootLayout() {
     <AuthProvider>
       <RootLayoutNav />
       <StatusBar style="auto" />
+      <Toast />
     </AuthProvider>
   );
 }

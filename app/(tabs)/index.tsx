@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Users, Phone, Calendar, MapPin, Heart, Shield, VenusAndMars } from 'lucide-react-native';
+import { User, Users, Phone, Calendar, MapPin, Heart, Shield, VenusAndMars, IdCard } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { useFocusEffect } from 'expo-router';
@@ -30,10 +30,8 @@ export default function HomeScreen() {
     setLoading(false);
   };
 
-  function combineAddress({ address, area, city, state }) {
-    const parts = [address, area, city, state].filter(part => part && part.trim() !== '');
-    if (parts.length === 0) return '-';
-    return parts.join(', ');
+  function combineAddress({ govtIdNum }) {
+    return govtIdNum
   }
 
   const onRefresh = async () => {
@@ -134,7 +132,7 @@ export default function HomeScreen() {
                 })}
               />
               <InfoCard icon={Phone} label="Mobile Number" value={patient.phone_number} />
-              <InfoCard icon={MapPin} label="Address" value={`${combineAddress({ ...patient })}`} />
+              <InfoCard icon={IdCard} label="Govt ID Number" value={`${combineAddress({ ...patient })}`} />
             </View>
           </View>
         </View>

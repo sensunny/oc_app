@@ -18,8 +18,22 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../constants/theme';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
+
+const showToast = (
+  message: string,
+  type: 'success' | 'error' = 'error'
+) => {
+  Toast.show({
+    type,
+    text1: message,
+    position: 'top',
+    visibilityTime: 3500,
+    topOffset: 60,
+  });
+};
 
 // Brand palette
 const BRAND = {
@@ -68,13 +82,16 @@ export default function LoginScreen() {
       setErrors({ identifier: 'Please enter a valid Mobile Number', otp: '' });
       return;
     }
+    setLoading(true);
     const success = await sendOTP(identifier);
+    setLoading(false);
     if (success && success === 'true') {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       setStep('otp');
     } else {
-      Alert.alert(success);
+      // Alert.alert(success);
+      showToast(success, 'error');
     }
   };
 
@@ -94,7 +111,8 @@ export default function LoginScreen() {
     if (success) {
       router.replace('/(tabs)');
     } else {
-      Alert.alert('Login Failed', 'Invalid credentials. Please try again.');
+      // Alert.alert('Login Failed', 'Invalid credentials. Please try again.');
+      showToast('Invalid OTP or credentials', 'error');
     }
   };
 
@@ -173,7 +191,7 @@ export default function LoginScreen() {
                           end={{ x: 1, y: 1 }}
                           style={styles.gradientButton}
                         >
-                          <Button title="Continue" onPress={handleSendOtp} transparent />
+                          <Button title="Continue" loading={loading} onPress={handleSendOtp} transparent />
                         </LinearGradient>
                       </>
                     ) : (
