@@ -1,7 +1,27 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Animated, RefreshControl, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  Animated,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Users, Phone, Calendar, MapPin, Heart, Shield, VenusAndMars, IdCard } from 'lucide-react-native';
+import {
+  User,
+  Users,
+  Phone,
+  Calendar,
+  MapPin,
+  Heart,
+  Shield,
+  VenusAndMars,
+  IdCard,
+} from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { useFocusEffect } from 'expo-router';
@@ -30,25 +50,41 @@ export default function HomeScreen() {
     setLoading(false);
   };
 
+  // ===== FIX HELPERS (ONLY CHANGE) =====
+  const safeValue = (value?: string | null) => {
+    if (!value || value === 'undefined' || value === 'null') return '-';
+    return String(value);
+  };
+
+  const getAge = (dob?: string) => {
+    if (!dob) return '-';
+    const date = new Date(dob);
+    if (isNaN(date.getTime())) return '-';
+    const age = new Date().getFullYear() - date.getFullYear();
+    return age > 0 ? `${age} yrs` : '-';
+  };
+
+  const formatDOB = (dob?: string) => {
+    if (!dob) return '-';
+    const date = new Date(dob);
+    if (isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
   function combineAddress({ govtIdNum }) {
-    return govtIdNum
+    return safeValue(govtIdNum);
   }
+  // ====================================
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadPatientData();
     setRefreshing(false);
   };
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ marginTop: 10, color: COLORS.text }}>Loading patient data...</Text>
-      </View>
-    );
-  }
-
 
   if (!patient) {
     return (
@@ -58,7 +94,17 @@ export default function HomeScreen() {
     );
   }
 
-  const QuickStatCard = ({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) => (
+  const QuickStatCard = ({
+    icon: Icon,
+    label,
+    value,
+    color,
+  }: {
+    icon: any;
+    label: string;
+    value: string;
+    color: string;
+  }) => (
     <View style={styles.quickStatCard}>
       <View style={[styles.quickStatIcon, { backgroundColor: color + '15' }]}>
         <Icon size={20} color={color} strokeWidth={2.5} />
@@ -68,7 +114,15 @@ export default function HomeScreen() {
     </View>
   );
 
-  const InfoCard = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
+  const InfoCard = ({
+    icon: Icon,
+    label,
+    value,
+  }: {
+    icon: any;
+    label: string;
+    value: string;
+  }) => (
     <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
       <View style={styles.iconContainer}>
         <Icon size={20} color="#20206b" strokeWidth={2.5} />
@@ -113,26 +167,40 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.quickStatsSection}>
             <View style={styles.quickStatsGrid}>
-              <QuickStatCard icon={Users} label="Age" value={new Date().getFullYear() - new Date(patient.date_of_birth).getFullYear() + ' yrs'} color="#9966ff" />
-              <QuickStatCard icon={VenusAndMars} label="Gender" value={patient.gender} color="#262f82" />
+              <QuickStatCard
+                icon={Users}
+                label="Age"
+                value={getAge(patient.date_of_birth)}
+                color="#9966ff"
+              />
+              <QuickStatCard
+                icon={VenusAndMars}
+                label="Gender"
+                value={safeValue(patient.gender)}
+                color="#262f82"
+              />
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Personal Details</Text>
             <View style={styles.cardsContainer}>
-              <InfoCard icon={User} label="Full Name" value={patient.patient_name} />
+              <InfoCard icon={User} label="Full Name" value={safeValue(patient.patient_name)} />
               <InfoCard
                 icon={Calendar}
                 label="Date of Birth"
-                value={new Date(patient.date_of_birth).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                value={formatDOB(patient.date_of_birth)}
               />
-              <InfoCard icon={Phone} label="Mobile Number" value={patient.phone_number} />
-              <InfoCard icon={IdCard} label="Govt ID Number" value={`${combineAddress({ ...patient })}`} />
+              <InfoCard
+                icon={Phone}
+                label="Mobile Number"
+                value={safeValue(patient.phone_number)}
+              />
+              <InfoCard
+                icon={IdCard}
+                label="Govt ID Number"
+                value={combineAddress({ ...patient })}
+              />
             </View>
           </View>
         </View>
@@ -142,7 +210,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.lightGray }, // brand light background
+  container: { flex: 1, backgroundColor: COLORS.lightGray },
   headerBackground: { position: 'absolute', top: 0, left: 0, right: 0, height: 280 },
   headerContent: {
     position: 'absolute',
@@ -164,8 +232,18 @@ const styles = StyleSheet.create({
   },
   logoSmall: { width: 100, height: 32 },
   welcomeSection: { marginTop: SPACING.sm, zIndex: 0 },
-  welcomeText: { fontSize: FONT_SIZES.md, color: 'rgba(255,255,255,0.9)', marginBottom: 4 },
-  patientName: { fontSize: FONT_SIZES.xxxl, fontWeight: '800', color: COLORS.white, marginBottom: SPACING.sm, letterSpacing: -0.5 },
+  welcomeText: {
+    fontSize: FONT_SIZES.md,
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: 4,
+  },
+  patientName: {
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: '800',
+    color: COLORS.white,
+    marginBottom: SPACING.sm,
+    letterSpacing: -0.5,
+  },
   idBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -196,11 +274,28 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  quickStatIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.sm },
-  quickStatValue: { fontSize: FONT_SIZES.xl, fontWeight: '800', color: '#20206b', marginBottom: 2 },
+  quickStatIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+  },
+  quickStatValue: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '800',
+    color: '#20206b',
+    marginBottom: 2,
+  },
   quickStatLabel: { fontSize: FONT_SIZES.xs, color: '#262f82', textAlign: 'center' },
   section: { marginBottom: SPACING.lg },
-  sectionTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: '#20206b', marginBottom: SPACING.md },
+  sectionTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '700',
+    color: '#20206b',
+    marginBottom: SPACING.md,
+  },
   cardsContainer: { gap: SPACING.sm },
   infoCard: {
     backgroundColor: COLORS.white,
@@ -226,5 +321,10 @@ const styles = StyleSheet.create({
   infoContent: { flex: 1 },
   infoLabel: { fontSize: FONT_SIZES.xs, color: '#262f82', marginBottom: 2, fontWeight: '500' },
   infoValue: { fontSize: FONT_SIZES.md, color: '#20206b', fontWeight: '600' },
-  errorText: { fontSize: FONT_SIZES.md, color: COLORS.error, textAlign: 'center', marginTop: SPACING.xxl },
+  errorText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.error,
+    textAlign: 'center',
+    marginTop: SPACING.xxl,
+  },
 });
