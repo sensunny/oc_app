@@ -23,10 +23,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { appointmentApi } from '../../services/api';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import { Sun, Sunrise, Sunset } from 'lucide-react-native';
 
 /* ================= API ================= */
 
 const API = 'https://www.oncarecancer.com/mobile-app/';
+
+const groupSlotsByTime = (slots: any[]) => {
+  const groups = {
+    morning: [],
+    afternoon: [],
+    evening: [],
+  };
+
+  slots.forEach(slot => {
+    const hour = new Date(slot.dateTime).getHours();
+
+    if (hour >= 5 && hour < 12) groups.morning.push(slot);
+    else if (hour >= 12 && hour < 17) groups.afternoon.push(slot);
+    else if (hour >= 17 && hour < 22) groups.evening.push(slot);
+  });
+
+  return groups;
+};
+
 
 const retry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
   try {
@@ -404,29 +424,59 @@ const pastAppointments = useMemo(
                       <ActivityIndicator />
                     )}
 
-                    <View style={styles.slotGrid}>
-                      {slots.map(s => (
-                        <TouchableOpacity
-                          key={s.dateTime}
-                          style={[
-                            styles.slot,
-                            selectedSlot?.dateTime === s.dateTime &&
-                              styles.slotActive,
-                          ]}
-                          onPress={() => setSelectedSlot(s)}
-                        >
-                          <Text
-                            style={[
-                              styles.slotText,
-                              selectedSlot?.dateTime === s.dateTime &&
-                                styles.slotTextActive,
-                            ]}
-                          >
-                            {s.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    {(() => {
+  const grouped = groupSlotsByTime(slots);
+
+  const renderGroup = (title: string, data: any[]) => {
+    if (!data.length) return null;
+
+    return (
+      <View style={{ marginBottom: SPACING.lg, width: '100%' }}>
+        <View style={styles.slotGroupHeader}>
+          {title === 'Morning' && <Sunrise size={16} color={COLORS.primary} />}
+          {title === 'Afternoon' && <Sun size={16} color={COLORS.primary} />}
+          {title === 'Evening' && <Sunset size={16} color={COLORS.primary} />}
+          <Text style={styles.slotGroupTitle}>{title}</Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.slotRow}
+        >
+          {data.map(s => (
+            <TouchableOpacity
+              key={s.dateTime}
+              style={[
+                styles.slot,
+                selectedSlot?.dateTime === s.dateTime && styles.slotActive,
+              ]}
+              onPress={() => setSelectedSlot(s)}
+            >
+              <Text
+                style={[
+                  styles.slotText,
+                  selectedSlot?.dateTime === s.dateTime &&
+                    styles.slotTextActive,
+                ]}
+              >
+                {s.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  return (
+    <>
+      {renderGroup('Morning', grouped.morning)}
+      {renderGroup('Afternoon', grouped.afternoon)}
+      {renderGroup('Evening', grouped.evening)}
+    </>
+  );
+})()}
 
                     {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -688,11 +738,45 @@ glassBtnRed: {
 
   dateCard: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, width: '100%' },
 
-  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' },
-  slot: { width: '48%', paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm, alignItems: 'center' },
-  slotActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  slotText: { fontWeight: '600' },
-  slotTextActive: { color: '#fff' },
+  slot: {
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 22,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  backgroundColor: '#FFFFFF',
+
+  // IMPORTANT: remove grid behavior
+  width: undefined,
+  marginBottom: 0,
+
+  // Premium elevation (Android)
+  elevation: 3,
+
+  // Premium shadow (iOS)
+  shadowColor: '#000',
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 4 },
+},
+
+slotActive: {
+  backgroundColor: COLORS.primary,
+  borderColor: COLORS.primary,
+  shadowOpacity: 0.2,
+  elevation: 6,
+},
+
+slotText: {
+  fontSize: FONT_SIZES.sm + 1,
+  fontWeight: '700',
+  color: COLORS.secondary,
+},
+
+slotTextActive: {
+  color: '#FFFFFF',
+},
+
 
   errorText: { color: '#DC2626', marginTop: 6, fontWeight: '600' },
   reviewText: { fontSize: FONT_SIZES.sm, marginVertical: 4 },
@@ -710,5 +794,23 @@ glassBtnRed: {
   cancelActions: {
     width: '100%',
   marginTop: SPACING.lg,
-  }
+  },
+  slotGroupHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  marginBottom: SPACING.sm,
+},
+
+slotGroupTitle: {
+  fontSize: FONT_SIZES.sm + 1,
+  fontWeight: '800',
+  color: COLORS.secondary,
+},
+
+slotRow: {
+  gap: 12,
+  paddingVertical: 4,
+},
+
 });

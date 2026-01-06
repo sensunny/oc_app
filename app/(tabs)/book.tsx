@@ -25,6 +25,11 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { router } from 'expo-router';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  Sun,
+  Sunrise,
+  Sunset,
+} from 'lucide-react-native';
 
 
 if (Platform.OS === 'android') {
@@ -139,6 +144,25 @@ export default function BookAppointmentScreen() {
   );
 
   /* ================= HELPERS ================= */
+
+  const groupSlotsByTime = (slots: any[]) => {
+  const groups = {
+    morning: [],
+    afternoon: [],
+    evening: [],
+  };
+
+  slots.forEach((slot) => {
+    const hour = new Date(slot.dateTime).getHours();
+
+    if (hour >= 5 && hour < 12) groups.morning.push(slot);
+    else if (hour >= 12 && hour < 17) groups.afternoon.push(slot);
+    else if (hour >= 17 && hour < 22) groups.evening.push(slot);
+  });
+
+  return groups;
+};
+
 
   const fetchSlots = async (
     locationId: number,
@@ -274,7 +298,7 @@ export default function BookAppointmentScreen() {
           {locations.map((l) => (
             <Option
               key={l.id}
-              label={`${l.name}, ${l.city}`}
+              label={`${l.name}, ${l.area}`}
               active={location?.id === l.id}
               onPress={() => selectLocation(l)}
             />
@@ -352,16 +376,49 @@ export default function BookAppointmentScreen() {
               </Text>
             )}
 
-            <View style={styles.slotGrid}>
-              {slots.map((s) => (
-                <Slot
-                  key={s.dateTime}
-                  label={s.name}
-                  active={selectedSlot?.dateTime === s.dateTime}
-                  onPress={() => setSelectedSlot(s)}
-                />
-              ))}
-            </View>
+            {(() => {
+  const grouped = groupSlotsByTime(slots);
+
+  const renderGroup = (title: string, data: any[]) => {
+    if (!data.length) return null;
+
+    return (
+      <View style={{ marginBottom: SPACING.lg }}>
+        <View style={styles.slotGroupHeader}>
+  {title === 'Morning' && <Sunrise size={18} color={COLORS.primary} />}
+  {title === 'Afternoon' && <Sun size={18} color={COLORS.primary} />}
+  {title === 'Evening' && <Sunset size={18} color={COLORS.primary} />}
+
+  <Text style={styles.slotGroupTitle}>{title}</Text>
+</View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.slotRow}
+        >
+          {data.map((s) => (
+            <Slot
+              key={s.dateTime}
+              label={s.name}
+              active={selectedSlot?.dateTime === s.dateTime}
+              onPress={() => setSelectedSlot(s)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  return (
+    <>
+      {renderGroup('Morning', grouped.morning)}
+      {renderGroup('Afternoon', grouped.afternoon)}
+      {renderGroup('Evening', grouped.evening)}
+    </>
+  );
+})()}
+
           </Section>
         )}
       </ScrollView>
@@ -749,4 +806,60 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
+
+  slotGroupTitle: {
+  fontSize: FONT_SIZES.sm + 2,
+  fontWeight: '800',
+  marginBottom: SPACING.sm,
+  color: COLORS.textPrimary,
+},
+
+slotRow: {
+  gap: 12,
+  paddingVertical: 4,
+},
+
+slot: {
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 22,
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  backgroundColor: '#FFFFFF',
+  shadowColor: '#000',
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  elevation: 3,
+},
+
+slotActive: {
+  backgroundColor: COLORS.primary,
+  borderColor: COLORS.primary,
+  shadowOpacity: 0.2,
+  elevation: 6,
+},
+
+slotText: {
+  fontSize: FONT_SIZES.sm + 1,
+  fontWeight: '700',
+  color: COLORS.textPrimary,
+},
+
+slotTextActive: {
+  color: COLORS.white,
+},
+slotGroupHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+  marginBottom: SPACING.sm,
+},
+
+slotGroupTitle: {
+  fontSize: FONT_SIZES.sm + 2,
+  fontWeight: '800',
+  color: COLORS.textPrimary,
+  letterSpacing: 0.3,
+},
+
 });

@@ -6,7 +6,7 @@ const API_BASE_URL = 'https://api.example.com';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const patientApi = {
-  sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string }> => {
+  sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string, mobile?: string }> => {
     try {
       const res = await fetch('https://www.oncarecancer.com/mobile-app/sendOTP', {
         method: 'POST',
@@ -25,6 +25,7 @@ export const patientApi = {
         success: true,
         otp_id: data.data.otp_id,
         message: data.message || 'OTP sent successfully',
+        mobile: data.data.mobile,
       };
     } catch (error) {
       console.error('Send OTP error:', error);

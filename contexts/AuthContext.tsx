@@ -59,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.success && result.otp_id) {
         // Store OTP ID for later use during verification
         await AsyncStorage.setItem('otp_id', result.otp_id);
+        await AsyncStorage.setItem('mobile', result.mobile);
         console.log('OTP sent successfully:', result.message);
         return 'true';
       }

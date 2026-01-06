@@ -18,6 +18,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../constants/theme';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -57,6 +58,7 @@ export default function LoginScreen() {
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ identifier: '', otp: '' });
+  const [userMobile, setUserMobile] = useState('');
 
   /* Smooth & glitch-free */
   useEffect(() => {
@@ -73,12 +75,12 @@ export default function LoginScreen() {
     setErrors({ identifier: '', otp: '' });
 
     if (!identifier.trim()) {
-      setErrors({ identifier: 'Please enter Mobile Number', otp: '' });
+      setErrors({ identifier: 'Please enter Mobile Number/Hospital Id', otp: '' });
       return;
     }
 
-    if (identifier.length < 8) {
-      setErrors({ identifier: 'Please enter a valid Mobile Number', otp: '' });
+    if (identifier.length < 4) {
+      setErrors({ identifier: 'Please enter a valid Mobile Number/Hospital Id', otp: '' });
       return;
     }
 
@@ -88,6 +90,9 @@ export default function LoginScreen() {
 
     if (success === 'true') {
       setStep('otp');
+      let mobileValue = await AsyncStorage.getItem('mobile')
+      console.log("mobileValue",mobileValue)
+      setUserMobile(mobileValue || "");
     } else {
       showToast(success, 'error');
     }
@@ -107,7 +112,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const success = await login(identifier, otp);
+    const success = await login(userMobile, otp);
     setLoading(false);
 
     if (success) {
@@ -161,16 +166,16 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>
               {step === 'identifier'
                 ? 'Access your OnCare medical records securely'
-                : `Enter the code sent to ${identifier}`}
+                : `Enter the code sent to ${userMobile}`}
             </Text>
 
             {step === 'identifier' ? (
               <>
                 <Input
-                  label="Mobile Number"
+                  label="Mobile Number/Hospital Id"
                   value={identifier}
                   onChangeText={setIdentifier}
-                  placeholder="Enter your mobile number"
+                  placeholder="Mobile Number/Hospital Id"
                   keyboardType="phone-pad"
                   error={errors.identifier}
                 />
