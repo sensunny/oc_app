@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,45 +6,117 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Animated,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar } from 'lucide-react-native';
-import { useAuth } from '../../contexts/AuthContext';
+import {
+  Calendar,
+  Clock,
+  XCircle,
+  CheckCircle,
+  MapPin,
+  User,
+} from 'lucide-react-native';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { appointmentApi } from '../../services/api';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
-import { useFocusEffect } from '@react-navigation/native';
+
+/* ================= API ================= */
+
+const API = 'https://www.oncarecancer.com/mobile-app/';
+
+const retry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
+  try {
+    return await fn();
+  } catch {
+    if (retries <= 0) throw new Error('Failed');
+    await new Promise(r => setTimeout(r, 800));
+    return retry(fn, retries - 1);
+  }
+};
+
+const post = async (url: string, body: any) => {
+  const token = await AsyncStorage.getItem('access_token');
+
+  const res = await fetch(`${API}${url}`, {
+    method: 'POST',
+    headers: {
+      token: `${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const json = await res.json();
+  if (json.code !== 1) throw new Error(json.message);
+  return json.data;
+};
+
+/* ================= HELPERS ================= */
+
+const formatDateTime = (dateStr: string) =>
+  new Date(dateStr).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+const formatOnlyDate = (date: Date) =>
+  date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+/* ================= TYPES ================= */
 
 interface Appointment {
   appointmentId: string;
   visitTypeName: string;
   patientBookedChannel: string;
-  status: 'completed' | 'pending' | 'confirmed';
+  status: 'completed' | 'pending' | 'confirmed' | 'cancelled';
   paidAmount: number;
   practitionerName: string;
   dateTime: string;
+  locationId: string;
+  locationAlias: string;
+  practionerId: string;
 }
 
 type TabType = 'upcoming' | 'past';
 
-export default function AppointmentsScreen() {
-  const { patient } = useAuth();
+/* ================= SCREEN ================= */
 
+export default function AppointmentsScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
 
-  useFocusEffect(
-    useCallback(() => {
-      setActiveTab('upcoming');
-      loadAppointments();
-    }, [])
-  );
+  const [rescheduleAppt, setRescheduleAppt] = useState<Appointment | null>(null);
+  const [cancelAppt, setCancelAppt] = useState<Appointment | null>(null);
+  const [newDate, setNewDate] = useState(new Date());
+  const [slots, setSlots] = useState<any[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [slotLoading, setSlotLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+const [cancelSuccess, setCancelSuccess] = useState(false);
+
+  /* ================= LOAD ================= */
 
   const loadAppointments = async () => {
-    if (!patient) return;
     try {
       setLoading(true);
       const data = await appointmentApi.getPatientAppointments();
@@ -56,113 +128,179 @@ export default function AppointmentsScreen() {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      setActiveTab('upcoming');
+      loadAppointments();
+    }, [])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadAppointments();
     setRefreshing(false);
   };
 
+  /* ================= FILTER ================= */
+
   const now = new Date();
 
   const upcomingAppointments = useMemo(
-    () => appointments.filter(a => new Date(a.dateTime) >= now),
-    [appointments]
-  );
+  () =>
+    appointments.filter(
+      a =>
+        new Date(a.dateTime) >= now &&
+        (a.status === 'confirmed' || a.status === 'pending')
+    ),
+  [appointments]
+);
 
-  const pastAppointments = useMemo(
-    () => appointments.filter(a => new Date(a.dateTime) < now),
-    [appointments]
-  );
+const pastAppointments = useMemo(
+  () =>
+    appointments.filter(
+      a =>
+        new Date(a.dateTime) < now ||
+        a.status === 'completed' ||
+        a.status === 'cancelled'
+    ),
+  [appointments]
+);
 
   const filteredAppointments =
     activeTab === 'upcoming' ? upcomingAppointments : pastAppointments;
 
-  const formatDateTime = (date: string) =>
-    new Date(date).toLocaleString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  /* ================= SLOTS ================= */
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return { bg: '#34C75915', color: '#34C759' };
-      case 'pending':
-        return { bg: '#FF950015', color: '#FF9500' };
-      case 'confirmed':
-        return { bg: '#007AFF15', color: '#007AFF' };
-      default:
-        return { bg: COLORS.lightGray, color: COLORS.secondary };
+  const fetchSlots = async (appt: Appointment, date: Date) => {
+    setSlotLoading(true);
+    setSlots([]);
+    setSelectedSlot(null);
+    setError('');
+    try {
+      const data = await retry(() =>
+        post('visit-slots', {
+          locationId: appt.locationId,
+          practitionerId: appt.practionerId,
+          visitTypeName: appt.visitTypeName,
+          date: date.toISOString().split('T')[0],
+        })
+      );
+      setSlots(data);
+
+      const existing = data.find(
+        (s: any) => s.dateTime === appt.dateTime
+      );
+      if (existing) {
+        setSelectedSlot(existing);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to load slots');
+    } finally {
+      setSlotLoading(false);
     }
   };
 
-  /* ---------------- Skeleton ---------------- */
+  const confirmReschedule = async () => {
+    if (!selectedSlot) {
+      setError('Please select a time slot');
+      return;
+    }
 
-  const SkeletonCard = () => (
-    <View style={styles.skeletonCard}>
-      <View style={styles.skeletonLineLarge} />
-      <View style={styles.skeletonLineSmall} />
-      <View style={styles.skeletonLineSmall} />
-      <View style={styles.skeletonLineMedium} />
+    try {
+      setSubmitting(true);
+      await retry(() =>
+        post('reschedule-appointment', {
+          appointmentId: rescheduleAppt?.appointmentId,
+          locationId: rescheduleAppt?.locationId,
+          dateTime: selectedSlot.dateTime,
+        })
+      );
+      setSuccess(true);
+      setTimeout(() => {
+        setRescheduleAppt(null);
+        setReviewMode(false);
+        setSuccess(false);
+        loadAppointments();
+      }, 1600);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ================= CARD ================= */
+
+  const AppointmentCard = ({ appointment }: { appointment: Appointment }) => (
+    <View style={styles.card}>
+      <View
+        style={[
+          styles.statusBadge,
+          appointment.status === 'confirmed' && styles.statusConfirmed,
+          appointment.status === 'pending' && styles.statusPending,
+          appointment.status === 'completed' && styles.statusCompleted,
+          appointment.status === 'cancelled' && styles.statusCancelled,
+        ]}
+      >
+        <Text style={styles.statusText}>
+          {appointment.status.toUpperCase()}
+        </Text>
+      </View>
+
+      <Text style={styles.cardTitle}>{appointment.visitTypeName}</Text>
+
+      <View style={styles.row}>
+        <User size={14} color={COLORS.primary} />
+        <Text style={styles.label}>Doctor:</Text>
+        <Text style={styles.value}>{appointment.practitionerName}</Text>
+      </View>
+
+      <View style={styles.row}>
+        <MapPin size={14} color={COLORS.primary} />
+        <Text style={styles.label}>Location:</Text>
+        <Text style={styles.value}>{appointment.locationAlias}</Text>
+      </View>
+
+      <View style={styles.row}>
+        <Clock size={14} color={COLORS.primary} />
+        <Text style={styles.label}>Date:</Text>
+        <Text style={styles.value}>
+          {formatDateTime(appointment.dateTime)}
+        </Text>
+      </View>
+
+      {appointment.status === 'confirmed' && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={() => {
+              const apptDate = new Date(appointment.dateTime);
+              setRescheduleAppt(appointment);
+              setNewDate(apptDate);
+              setSelectedSlot({
+                dateTime: appointment.dateTime,
+                name: formatDateTime(appointment.dateTime),
+              });
+              fetchSlots(appointment, apptDate);
+            }}
+          >
+            <Clock size={14} color="#fff" />
+            <Text style={styles.glassText}>Reschedule</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.glassBtnRed}
+            onPress={() => setCancelAppt(appointment)}
+          >
+            <XCircle size={14} color="#fff" />
+            <Text style={styles.glassText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
-  /* ---------------- Appointment Card ---------------- */
-
-  const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
-    const statusStyle = getStatusStyle(appointment.status);
-
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.label}>Appointment Type</Text>
-            <Text style={styles.value}>{appointment.visitTypeName}</Text>
-          </View>
-
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: statusStyle.bg },
-            ]}
-          >
-            <Text
-              style={[styles.statusText, { color: statusStyle.color }]}
-            >
-              {appointment.status.toUpperCase()}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Practitioner</Text>
-          <Text style={styles.value}>{appointment.practitionerName}</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Appointment Date</Text>
-          <Text style={styles.value}>
-            {formatDateTime(appointment.dateTime)}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Booking Source</Text>
-          <Text style={styles.value}>
-            {appointment.patientBookedChannel}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Paid Amount</Text>
-          <Text style={styles.value}>₹{appointment.paidAmount}</Text>
-        </View>
-      </View>
-    );
-  };
+  /* ================= UI ================= */
 
   return (
     <View style={styles.container}>
@@ -176,7 +314,6 @@ export default function AppointmentsScreen() {
         <Text style={styles.pageTitle}>Appointments</Text>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabs}>
         <TouchableOpacity
           onPress={() => setActiveTab('upcoming')}
@@ -214,50 +351,251 @@ export default function AppointmentsScreen() {
       >
         <View style={styles.list}>
           {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <SkeletonCard key={`skeleton-${i}`} />
-            ))
+            <ActivityIndicator />
           ) : filteredAppointments.length === 0 ? (
             <Text style={styles.emptyText}>
               No {activeTab} appointments
             </Text>
           ) : (
-            filteredAppointments.map((appt, idx) => (
+            filteredAppointments.map(appt => (
               <AppointmentCard
-                key={`${appt.appointmentId}-${idx}`}
+                key={appt.appointmentId}
                 appointment={appt}
               />
             ))
           )}
         </View>
       </ScrollView>
+
+      {/* ================= RESCHEDULE MODAL ================= */}
+      {rescheduleAppt && (
+        <View style={styles.overlay}>
+          <View style={styles.modalCard}>
+            {success ? (
+              <>
+                <CheckCircle size={72} color="#16A34A" />
+                <Text style={styles.successText}>
+                  Appointment Rescheduled
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>
+                  {reviewMode ? 'Review Changes' : 'Reschedule Appointment'}
+                </Text>
+
+                <Text style={styles.modalSub}>
+                  {rescheduleAppt.visitTypeName} •{' '}
+                  {rescheduleAppt.practitionerName}
+                </Text>
+
+                {!reviewMode ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.dateCard}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={styles.value}>
+                        {newDate.toDateString()}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {slotLoading && (
+                      <ActivityIndicator />
+                    )}
+
+                    <View style={styles.slotGrid}>
+                      {slots.map(s => (
+                        <TouchableOpacity
+                          key={s.dateTime}
+                          style={[
+                            styles.slot,
+                            selectedSlot?.dateTime === s.dateTime &&
+                              styles.slotActive,
+                          ]}
+                          onPress={() => setSelectedSlot(s)}
+                        >
+                          <Text
+                            style={[
+                              styles.slotText,
+                              selectedSlot?.dateTime === s.dateTime &&
+                                styles.slotTextActive,
+                            ]}
+                          >
+                            {s.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                    <TouchableOpacity
+                      style={styles.primaryBtn}
+                      onPress={() => {
+                        if (!selectedSlot) {
+                          setError('Please select a time slot');
+                          return;
+                        }
+                        setError('');
+                        setReviewMode(true);
+                      }}
+                    >
+                      <Text style={styles.primaryText}>Review</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.secondaryBtn}
+                      onPress={() => setRescheduleAppt(null)}
+                    >
+                      <Text style={styles.secondaryText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.reviewText}>
+                      Old: {formatDateTime(rescheduleAppt.dateTime)}
+                    </Text>
+
+                    <Text style={styles.reviewText}>                      
+                      New: {formatDateTime(selectedSlot?.dateTime)}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.primaryBtn}
+                      disabled={submitting}
+                      onPress={confirmReschedule}
+                    >
+                      {submitting ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.primaryText}>Confirm</Text>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.secondaryBtn}
+                      onPress={() => setReviewMode(false)}
+                    >
+                      <Text style={styles.secondaryText}>Go Back</Text>
+                    </TouchableOpacity>
+
+                    
+
+                    {/* <TouchableOpacity
+                      style={styles.dangerBtn}
+                      onPress={() => setRescheduleAppt(null)}
+                    >
+                      <Text style={styles.dangerText}>Cancel</Text>
+                    </TouchableOpacity> */}
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* ================= CANCEL MODAL ================= */}
+      {cancelAppt && (
+  <View style={styles.overlay}>
+    <View style={styles.modalCard}>
+      {cancelSuccess ? (
+        <>
+          <CheckCircle size={72} color="#16A34A" />
+          <Text style={styles.successText}>
+            Appointment Cancelled
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.modalTitle}>Cancel Appointment?</Text>
+
+          <Text style={styles.modalSub}>
+            {cancelAppt.visitTypeName} •{' '}
+            {formatDateTime(cancelAppt.dateTime)}
+          </Text>
+
+          <View style={styles.cancelActions}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              disabled={cancelSubmitting}
+              onPress={() => setCancelAppt(null)}
+            >
+              <Text style={styles.secondaryText}>No</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.dangerBtn}
+              disabled={cancelSubmitting}
+              onPress={async () => {
+                try {
+                  setCancelSubmitting(true);
+
+                  await retry(() =>
+                    post('cancel-appointment', {
+                      appointmentId: cancelAppt.appointmentId,
+                    })
+                  );
+
+                  setCancelSuccess(true);
+
+                  setTimeout(() => {
+                    setCancelAppt(null);
+                    setCancelSuccess(false);
+                    loadAppointments();
+                  }, 1500);
+                } catch {
+                  Alert.alert('Error', 'Failed to cancel appointment');
+                } finally {
+                  setCancelSubmitting(false);
+                }
+              }}
+            >
+              {cancelSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.dangerText}>Yes, Cancel</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </View>
+  </View>
+)}
+
+
+      <DateTimePickerModal
+        isVisible={showDatePicker}
+        mode="date"
+        minimumDate={new Date()}
+        onConfirm={d => {
+          setShowDatePicker(false);
+          setNewDate(d);
+          if (rescheduleAppt) fetchSlots(rescheduleAppt, d);
+        }}
+        onCancel={() => setShowDatePicker(false)}
+      />
     </View>
   );
 }
 
-/* ---------------- Styles ---------------- */
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F6FA' },
-
-  headerBg: {
-    position: 'absolute',
-    height: 180,
-    left: 0,
-    right: 0,
-  },
+  headerBg: { position: 'absolute', height: 180, left: 0, right: 0 },
 
   pageHeader: {
     paddingTop: 55,
-    paddingBottom: SPACING.md,
     paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
-
   pageTitle: {
     fontSize: FONT_SIZES.xl + 1,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.white,
-    marginTop: 4,
   },
 
   tabs: {
@@ -267,99 +605,110 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 4,
   },
-
   tab: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 10,
   },
-
   activeTab: { backgroundColor: COLORS.primary },
-
   tabText: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
     color: COLORS.secondary,
   },
-
   activeTabText: { color: COLORS.white },
 
   list: { paddingHorizontal: SPACING.lg },
-
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-
-  row: { marginTop: 6 },
-
-  label: {
-    fontSize: FONT_SIZES.xs + 1,
-    color: COLORS.textSecondary,
-  },
-
-  value: {
-    fontSize: FONT_SIZES.sm + 1,
-    fontWeight: '500',
-    color: COLORS.secondary,
-  },
-
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  statusText: {
-    fontSize: FONT_SIZES.xs - 1,
-    fontWeight: '700',
-  },
-
-  skeletonCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-
-  skeletonLineLarge: {
-    height: 16,
-    width: '70%',
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-
-  skeletonLineSmall: {
-    height: 12,
-    width: '45%',
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-
-  skeletonLineMedium: {
-    height: 14,
-    width: '60%',
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 6,
-  },
-
   emptyText: {
     textAlign: 'center',
     marginTop: SPACING.xl,
-    fontSize: FONT_SIZES.sm + 1,
+    color: COLORS.textSecondary,
+  },
+
+  card: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  cardTitle: {
+    fontSize: FONT_SIZES.md + 1,
+    fontWeight: '800',
+    marginBottom: SPACING.sm,
     color: COLORS.secondary,
   },
+
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  label: { marginLeft: 6, marginRight: 4, fontWeight: '600', color: COLORS.textSecondary },
+  value: { fontWeight: '600', color: COLORS.secondary },
+
+  statusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  statusText: { fontSize: FONT_SIZES.xs, fontWeight: '800', color: '#fff' },
+  statusConfirmed: { backgroundColor: '#16A34A' },
+  statusPending: { backgroundColor: '#F59E0B' },
+  statusCompleted: { backgroundColor: '#6B7280' },
+  statusCancelled: { backgroundColor: '#DC2626' },
+
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.md },
+  glassBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 999,
+  backgroundColor: COLORS.primary,
+},
+glassBtnRed: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 999,
+  backgroundColor: '#E11D48',
+},
+  glassText: { color: '#fff', fontWeight: '700' },
+
+  overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: { backgroundColor: COLORS.white, borderRadius: 24, padding: 24, width: '88%', alignItems: 'center' },
+
+  modalTitle: { fontSize: FONT_SIZES.lg + 1, fontWeight: '800', marginBottom: 6 },
+  modalSub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginBottom: SPACING.md, textAlign: 'center' },
+
+  dateCard: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, width: '100%' },
+
+  slotGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' },
+  slot: { width: '48%', paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.sm, alignItems: 'center' },
+  slotActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  slotText: { fontWeight: '600' },
+  slotTextActive: { color: '#fff' },
+
+  errorText: { color: '#DC2626', marginTop: 6, fontWeight: '600' },
+  reviewText: { fontSize: FONT_SIZES.sm, marginVertical: 4 },
+
+  primaryBtn: { marginTop: SPACING.md, backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center' },
+  primaryText: { color: '#fff', fontWeight: '800', fontSize: FONT_SIZES.md },
+
+  secondaryBtn: { marginTop: SPACING.sm, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+  secondaryText: { fontWeight: '700', color: COLORS.secondary },
+
+  dangerBtn: { marginTop: SPACING.sm, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', backgroundColor: '#DC2626' },
+  dangerText: { color: '#fff', fontWeight: '800' },
+
+  successText: { marginTop: SPACING.md, fontSize: FONT_SIZES.md, fontWeight: '800', color: '#16A34A' },
+  cancelActions: {
+    width: '100%',
+  marginTop: SPACING.lg,
+  }
 });

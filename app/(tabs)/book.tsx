@@ -24,6 +24,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { router } from 'expo-router';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -34,22 +36,56 @@ if (Platform.OS === 'android') {
 const API = 'https://www.oncarecancer.com/mobile-app/';
 
 const get = async (url: string) => {
-  const res = await fetch(`${API}${url}`);
+  const token = await AsyncStorage.getItem('access_token');
+
+  const res = await fetch(`${API}${url}`, {
+    headers: {
+      token: `${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (res.status >= 400 && res.status < 500) {
+    console.warn('Session expired or invalid. Logging out...');
+    throw new Error('Session expired or unauthorized.');
+  }
+
   const json = await res.json();
-  if (json.code !== 1) throw new Error(json.message);
+
+  if (json.code !== 1) {
+    throw new Error(json.message);
+  }
+
   return json.data;
 };
 
+
 const post = async (url: string, body: any) => {
+  const token = await AsyncStorage.getItem('access_token');
+
   const res = await fetch(`${API}${url}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      token: `${token}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
   });
+
+  if (res.status >= 400 && res.status < 500) {
+    console.warn('Session expired or invalid. Logging out...');
+    throw new Error('Session expired or unauthorized.');
+  }
+
   const json = await res.json();
-  if (json.code !== 1) throw new Error(json.message);
+
+  if (json.code !== 1) {
+    throw new Error(json.message);
+  }
+
   return json.data;
 };
+
 
 /* ================= SCREEN ================= */
 
@@ -130,6 +166,44 @@ export default function BookAppointmentScreen() {
       setStepLoading(null);
     }
   };
+
+  const retry = async <T>(
+  fn: () => Promise<T>,
+  retries = 2,
+  delay = 800
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (retries <= 0) throw error;
+
+    // Do NOT retry for 4xx errors
+    if (error?.message?.includes('unauthorized')) {
+      throw error;
+    }
+
+    await new Promise((r) => setTimeout(r, delay));
+    return retry(fn, retries - 1, delay);
+  }
+};
+
+
+
+    const createAppointment = async () => {
+  if (!doctor || !location || !selectedSlot || !visitType) {
+    throw new Error('Missing appointment details');
+  }
+
+  return retry(() =>
+    post('create-appointment', {
+      practitionerId: doctor.id,
+      locationId: location.id,
+      dateTime: selectedSlot.dateTime,
+      visitTypeName: visitType,
+    })
+  );
+};
+
 
   /* ================= HANDLERS ================= */
 
@@ -319,13 +393,25 @@ export default function BookAppointmentScreen() {
                 <ConfirmRow label="Time Slot" value={selectedSlot.name} />
 
                 <TouchableOpacity
-                  style={styles.confirmBtn}
-                  onPress={() => {
-                    setIsConfirming(true);
-                    setTimeout(() => {
+                    style={[
+    styles.confirmBtn,
+    isConfirming && { opacity: 0.6 },
+  ]}
+  disabled={isConfirming}
+                  onPress={async () => {
+                    try {
+                      setIsConfirming(true);
+
+                      await createAppointment(); // 🔥 API INTEGRATION
+
+                      setTimeout(() => {
+                        setIsConfirming(false);
+                        setIsConfirmed(true);
+                      }, 1000);
+                    } catch (err: any) {
                       setIsConfirming(false);
-                      setIsConfirmed(true);
-                    }, 3000);
+                      Alert.alert('Error', err.message || 'Failed to book appointment');
+                    }
                   }}
                 >
                   {isConfirming ? (
