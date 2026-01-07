@@ -10,7 +10,12 @@ import {
   Dimensions,
   LayoutAnimation,
   UIManager,
+  Pressable,
+  Modal,
+  Animated,
+  Keyboard
 } from 'react-native';
+
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,13 +57,36 @@ const BRAND = {
 export default function LoginScreen() {
   const router = useRouter();
   const { login, sendOTP } = useAuth();
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+const openSheet = () => {
+  setIsUidOpen(true);
+  Animated.timing(sheetAnim, {
+    toValue: 1,
+    duration: 260,
+    useNativeDriver: true,
+  }).start();
+};
+
+const closeSheet = () => {
+  Animated.timing(sheetAnim, {
+    toValue: 0,
+    duration: 220,
+    useNativeDriver: true,
+  }).start(() => setIsUidOpen(false));
+};
+
 
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({ identifier: '', otp: '' });
+  const [errors, setErrors] = useState({ identifier: '', otp: '', hospitalUid: '' });
   const [userMobile, setUserMobile] = useState('');
+  const [hospitalUids, setHospitalUids] = useState<any[]>([]);
+  const [selectedHospitalUid, setSelectedHospitalUid] = useState('');
+  const [isUidOpen, setIsUidOpen] = useState(false);
+
+
 
   /* Smooth & glitch-free */
   useEffect(() => {
@@ -72,61 +100,87 @@ export default function LoginScreen() {
   }, [step]);
 
   const handleSendOtp = async () => {
-    setErrors({ identifier: '', otp: '' });
+    Keyboard.dismiss();
+  setErrors({ identifier: '', otp: '', hospitalUid: '' });
 
-    if (!identifier.trim()) {
-      setErrors({ identifier: 'Please enter Mobile Number/Hospital Id', otp: '' });
-      return;
+  if (!identifier.trim()) {
+    setErrors({ identifier: 'Please enter Mobile Number/Hospital Id', otp: '', hospitalUid: '' });
+    return;
+  }
+
+  setLoading(true);
+  const response: any = await sendOTP(identifier);
+  setLoading(false);
+
+  if (response?.code === 1) {
+    setStep('otp');
+    setUserMobile(response.data.mobile);
+
+    // 🔑 NEW
+    setHospitalUids(response.data.hospitalUids || []);
+
+    // Auto-select if only one UID
+    if (response.data.hospitalUids?.length === 1) {
+      setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
     }
-
-    if (identifier.length < 4) {
-      setErrors({ identifier: 'Please enter a valid Mobile Number/Hospital Id', otp: '' });
-      return;
-    }
-
-    setLoading(true);
-    const success = await sendOTP(identifier);
-    setLoading(false);
-
-    if (success === 'true') {
-      setStep('otp');
-      let mobileValue = await AsyncStorage.getItem('mobile')
-      console.log("mobileValue",mobileValue)
-      setUserMobile(mobileValue || "");
-    } else {
-      showToast(success, 'error');
-    }
+  } else {
+    showToast(response?.message || 'Something went wrong', 'error');
+  }
   };
+
 
   const handleVerifyOtp = async () => {
-    setErrors({ identifier: '', otp: '' });
+    Keyboard.dismiss();
+  setErrors({ identifier: '', otp: '', hospitalUid: '' });
 
-    if (!otp.trim()) {
-      setErrors({ identifier: '', otp: 'Please enter OTP' });
-      return;
-    }
+  if (!otp.trim()) {
+    setErrors({ identifier: '', otp: 'Please enter OTP', hospitalUid: '' });
+    return;
+  }
 
-    if (otp.length !== 4) {
-      setErrors({ identifier: '', otp: 'OTP must be 4 digits' });
-      return;
-    }
+  if (otp.length !== 4) {
+    setErrors({ identifier: '', otp: 'OTP must be 4 digits', hospitalUid: '' });
+    return;
+  }
 
-    setLoading(true);
-    const success = await login(userMobile, otp);
-    setLoading(false);
+  // 🔑 MULTI UID VALIDATION
+  if (hospitalUids.length > 1 && !selectedHospitalUid) {
+    setErrors({
+    identifier: '',
+    otp: '',
+    hospitalUid: 'Please select Hospital ID',
+  });
+  return;
+  }
 
-    if (success) {
-      router.replace('/(tabs)');
-    } else {
-      showToast('Invalid OTP or credentials', 'error');
-    }
-  };
+  setLoading(true);
+  const success = await login(userMobile, otp, selectedHospitalUid);
+  setLoading(false);
+
+  if (success) {
+    router.replace('/(tabs)');
+  } else {
+    showToast('Invalid OTP or credentials', 'error');
+  }
+};
+
 
   const handleBack = () => {
     setOtp('');
-    setErrors({ identifier: '', otp: '' });
+    setErrors({ identifier: '', otp: '', hospitalUid: '' });
     setStep('identifier');
   };
+
+  const toggleUidDropdown = () => {
+  LayoutAnimation.configureNext(
+    LayoutAnimation.create(
+      200,
+      LayoutAnimation.Types.easeInEaseOut,
+      LayoutAnimation.Properties.opacity
+    )
+  );
+  setIsUidOpen((prev) => !prev);
+};
 
   return (
     <View style={styles.container}>
@@ -194,6 +248,83 @@ export default function LoginScreen() {
               </>
             ) : (
               <>
+              {hospitalUids.length > 1 ? (
+  <>
+    {/* INPUT (unchanged look) */}
+    <Pressable onPress={openSheet}>
+      <View pointerEvents="none">
+        <Input
+          label="Hospital ID"
+          value={selectedHospitalUid || 'Select Hospital ID'}
+          editable={false}
+          error={errors.hospitalUid}
+        />
+      </View>
+    </Pressable>
+
+    {/* BOTTOM SHEET */}
+    <Modal
+      visible={isUidOpen}
+      transparent
+      animationType="none"
+      onRequestClose={closeSheet}
+    >
+      {/* Backdrop */}
+      <Pressable style={styles.sheetBackdrop} onPress={closeSheet} />
+
+      {/* Sheet */}
+      <Animated.View
+        style={[
+          styles.sheetContainer,
+          {
+            transform: [
+              {
+                translateY: sheetAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [400, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <View style={styles.sheetHandle} />
+
+        <Text style={styles.sheetTitle}>Select Hospital ID</Text>
+
+        <ScrollView>
+          {hospitalUids.map((item) => (
+            <Pressable
+              key={item.hospitalUid}
+              onPress={() => {
+                setSelectedHospitalUid(item.hospitalUid);
+                setErrors({ ...errors, hospitalUid: '' });
+                closeSheet();
+              }}
+            >
+              <View style={styles.sheetOption}>
+                <Text style={styles.sheetUid}>
+                  {item.hospitalUid}
+                </Text>
+                <Text style={styles.sheetName}>
+                  {item.name}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </Animated.View>
+    </Modal>
+  </>
+) : (
+  <Input
+    label="Hospital ID"
+    value={selectedHospitalUid}
+    editable={false}
+  />
+)}
+
+
                 <Input
                   label="Enter OTP"
                   value={otp}
@@ -311,4 +442,178 @@ const styles = StyleSheet.create({
   backBtn: {
     marginTop: SPACING.md,
   },
+
+dropdownLabel: {
+  fontSize: FONT_SIZES.sm,
+  color: BRAND.textMuted,
+  marginBottom: 6,
+},
+
+dropdownWrapper: {
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+  paddingVertical: 16,
+  paddingHorizontal: 14,
+  backgroundColor: '#fafafa',
+  marginBottom: SPACING.md,
+},
+
+dropdownValue: {
+  fontSize: FONT_SIZES.md,
+  color: BRAND.textPrimary,
+  fontWeight: '600',
+},
+
+placeholderText: {
+  color: '#9ca3af',
+  fontWeight: '500',
+},
+
+
+selectField: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+  borderRadius: 14,
+  paddingVertical: 16,
+  paddingHorizontal: 14,
+  backgroundColor: '#fafafa',
+},
+
+selectValue: {
+  fontSize: FONT_SIZES.md,
+  fontWeight: '600',
+  color: BRAND.textPrimary,
+},
+
+caret: {
+  fontSize: 18,
+  color: BRAND.textMuted,
+},
+
+inputLabel: {
+  fontSize: FONT_SIZES.sm,
+  color: BRAND.textMuted,
+  marginBottom: 6,
+},
+
+selectContainer: {
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+  borderRadius: 14,
+  paddingVertical: 16,
+  paddingHorizontal: 14,
+  backgroundColor: '#ffffff',
+},
+
+selectText: {
+  fontSize: FONT_SIZES.md,
+  fontWeight: '500',
+  color: BRAND.textPrimary,
+},
+
+selectPlaceholder: {
+  color: '#9ca3af',
+},
+
+selectOptionSelected: {
+  backgroundColor: '#f4f6ff',
+  fontWeight: '700',
+},
+
+
+inputErrorBorder: {
+  borderColor: '#ef4444',
+},
+
+inputErrorText: {
+  marginTop: 6,
+  fontSize: FONT_SIZES.sm,
+  color: '#ef4444',
+},
+
+selectDropdown: {
+  marginTop: -20,
+  marginBottom: 15,
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+  borderRadius: 14,
+  backgroundColor: '#ffffff',
+  overflow: 'hidden',
+},
+
+selectOption: {
+  paddingVertical: 16,
+  paddingHorizontal: 14,
+  borderBottomWidth: 1,
+  borderBottomColor: '#f1f5f9',
+  fontSize: FONT_SIZES.md,
+  fontWeight: '500',
+  color: BRAND.textPrimary,
+},
+
+selectSub: {
+  fontSize: FONT_SIZES.sm,
+  color: BRAND.textMuted,
+},
+sheetBackdrop: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.35)',
+},
+
+sheetContainer: {
+  position: 'absolute',
+  bottom: 0,
+  width: '100%',
+  maxHeight: '70%',
+  backgroundColor: '#ffffff',
+  borderTopLeftRadius: 28,
+  borderTopRightRadius: 28,
+  padding: SPACING.xl,
+  shadowColor: '#000',
+  shadowOpacity: 0.25,
+  shadowRadius: 30,
+  shadowOffset: { width: 0, height: -10 },
+  elevation: 20,
+},
+
+sheetHandle: {
+  width: 44,
+  height: 5,
+  borderRadius: 3,
+  backgroundColor: '#d1d5db',
+  alignSelf: 'center',
+  marginBottom: SPACING.md,
+},
+
+sheetTitle: {
+  fontSize: FONT_SIZES.lg,
+  fontWeight: '800',
+  color: BRAND.color2,
+  textAlign: 'center',
+  marginBottom: SPACING.lg,
+},
+
+sheetOption: {
+  paddingVertical: 18,
+  borderBottomWidth: 1,
+  borderBottomColor: '#f1f5f9',
+},
+
+sheetUid: {
+  fontSize: FONT_SIZES.md,
+  fontWeight: '700',
+  color: BRAND.textPrimary,
+},
+
+sheetName: {
+  fontSize: FONT_SIZES.sm,
+  color: BRAND.textMuted,
+  marginTop: 2,
+},
+
+
 });

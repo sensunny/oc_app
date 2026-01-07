@@ -5,8 +5,8 @@ import { patientApi } from '../services/api';
 import { cleanupListeners } from '../services/notifications';
 
 interface AuthContextType extends AuthState {
-  login: (identifier: string, otp: string) => Promise<boolean>;
-  sendOTP: (identifier: string) => Promise<string>;
+  login: (identifier: string, otp: string, selectedHospitalUid: string) => Promise<any>;
+  sendOTP: (identifier: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshPatient: () => Promise<void>;
   getPatient: () => Promise<void>;
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendOTP = async (identifier: string): Promise<string> => {
+  const sendOTP = async (identifier: string): Promise<any> => {
     try {
       const result = await patientApi.sendOTP(identifier);
   
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await AsyncStorage.setItem('otp_id', result.otp_id);
         await AsyncStorage.setItem('mobile', result.mobile);
         console.log('OTP sent successfully:', result.message);
-        return 'true';
+        return result;
       }
   
       console.warn('Send OTP failed:', result.message);
@@ -72,10 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (identifier: string, otp: string): Promise<boolean> => {
+  const login = async (identifier: string, otp: string, selectedHospitalUid: string): Promise<boolean> => {
     try {
       const otp_id = await AsyncStorage.getItem('otp_id') || "";
-      const result = await patientApi.login(identifier, otp, otp_id);
+      const result = await patientApi.login(identifier, otp, otp_id, selectedHospitalUid);
       console.log({result})
       if (result.success) {
         await AsyncStorage.setItem('access_token', result?.authData?.access_token ?? '');

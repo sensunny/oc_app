@@ -6,7 +6,7 @@ const API_BASE_URL = 'https://api.example.com';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const patientApi = {
-  sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string, mobile?: string }> => {
+  sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string, mobile?: string, hospitalUids?: any[], code?: number, data?: any }> => {
     try {
       const res = await fetch('https://www.oncarecancer.com/mobile-app/sendOTP', {
         method: 'POST',
@@ -26,6 +26,9 @@ export const patientApi = {
         otp_id: data.data.otp_id,
         message: data.message || 'OTP sent successfully',
         mobile: data.data.mobile,
+        hospitalUids: data.data.hospitalUids,
+        code: data.code,
+        data: data.data
       };
     } catch (error) {
       console.error('Send OTP error:', error);
@@ -33,7 +36,7 @@ export const patientApi = {
     }
   },
 
-  login: async (mobile: string, otp: string, otp_id?: string): Promise<{ success: boolean; authData?: AuthData; message?: string }> => {
+  login: async (mobile: string, otp: string, otp_id?: string, selectedHospitalUid?: string): Promise<{ success: boolean; authData?: AuthData; message?: string }> => {
     try {
       const res = await fetch('https://www.oncarecancer.com/mobile-app/verifyOTP', {
         method: 'POST',
@@ -43,7 +46,8 @@ export const patientApi = {
         body: JSON.stringify({
           mobile,
           otp,
-          otp_id, // optional, pass only if available
+          otp_id,
+          hospitalUid: selectedHospitalUid
         }),
       });
 
