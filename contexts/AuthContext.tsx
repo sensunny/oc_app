@@ -65,10 +65,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   
       console.warn('Send OTP failed:', result.message);
-      return result.message;
+      return result;
     } catch (error) {
       console.error('Send OTP error:', error);
-      return error;
+      return {message: error};
     }
   };
 

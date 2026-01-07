@@ -24,6 +24,7 @@ import { Input } from '../components/Input';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../constants/theme';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PremiumAlert } from './PremiumAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -40,7 +41,7 @@ const showToast = (
     text1: message,
     position: 'top',
     visibilityTime: 3500,
-    topOffset: 60,
+    topOffset: 100,
   });
 };
 
@@ -85,6 +86,11 @@ const closeSheet = () => {
   const [hospitalUids, setHospitalUids] = useState<any[]>([]);
   const [selectedHospitalUid, setSelectedHospitalUid] = useState('');
   const [isUidOpen, setIsUidOpen] = useState(false);
+  const [alert, setAlert] = useState({
+    visible: false,
+    title: '',
+    message: '',
+  });
 
 
 
@@ -112,20 +118,39 @@ const closeSheet = () => {
   const response: any = await sendOTP(identifier);
   setLoading(false);
 
-  if (response?.code === 1) {
-    setStep('otp');
-    setUserMobile(response.data.mobile);
+    if (response?.code === 1) {
+      setStep('otp');
+      setUserMobile(response.data.mobile);
 
-    // 🔑 NEW
-    setHospitalUids(response.data.hospitalUids || []);
+      // 🔑 NEW
+      setHospitalUids(response.data.hospitalUids || []);
 
-    // Auto-select if only one UID
-    if (response.data.hospitalUids?.length === 1) {
-      setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
+      // Auto-select if only one UID
+      if (response.data.hospitalUids?.length === 1) {
+        setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
+      }
+    } else {
+      // showToast(response?.message || 'Something went wrong', 'error');
+      setAlert({
+        visible: true,
+        title: 'Error',
+        message:
+          response?.message || 'Something went wrong',
+      });
     }
-  } else {
-    showToast(response?.message || 'Something went wrong', 'error');
-  }
+    if (response?.code === 3) {
+      // showToast(response?.message, 'error');
+      setAlert({
+        visible: true,
+        title: 'Info',
+        message:
+          response?.message || 'Something went wrong',
+      });
+      return;
+    }
+    // setTimeout(() => {
+    //     setAlert({ ...alert, visible: false });
+    // }, 3500);
   };
 
 
@@ -160,7 +185,11 @@ const closeSheet = () => {
   if (success) {
     router.replace('/(tabs)');
   } else {
-    showToast('Invalid OTP or credentials', 'error');
+    setAlert({
+      visible: true,
+      title: 'Error',
+      message: 'Invalid OTP or credentials',
+    });
   }
 };
 
@@ -184,6 +213,18 @@ const closeSheet = () => {
 
   return (
     <View style={styles.container}>
+    <PremiumAlert
+  visible={alert.visible}
+  title={alert.title}
+  message={alert.message}
+  onClose={() =>
+    setAlert({
+      visible: false,
+      title: '',
+      message: '',
+    })
+  }
+/>
       {/* Clean medical gradient */}
       <LinearGradient
         colors={[BRAND.color1, BRAND.color2]}
