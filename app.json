@@ -2,7 +2,6 @@
   "expo": {
     "name": "Patient Management",
     "slug": "oncarecancer",
-    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
@@ -22,7 +21,6 @@
       "color": "#262f82"
     },
     "android": {
-      "versionCode": 3,
       "package": "com.oncare.patientmanagementapp",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {

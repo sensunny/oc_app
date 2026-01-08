@@ -1,8 +1,4 @@
-// src/utils/apiClient.ts
-
-import { patientApi } from "@/services/api";
-
-const BASE_URL = "https://www.oncarecancer.com/mobile-app";
+export const BASE_URL = "https://www.oncarecancer.com/mobile-app";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 

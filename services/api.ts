@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Patient, Document, Notification, AuthData } from '../types';
 import { apiRequest } from '@/utils/apiClient';
+import { BASE_URL } from '@/utils/apiClient';
 
-const API_BASE_URL = 'https://api.example.com';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const patientApi = {
   sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string, mobile?: string, hospitalUids?: any[], code?: number, data?: any }> => {
     try {
-      const res = await fetch('https://www.oncarecancer.com/mobile-app/sendOTP', {
+      const res = await fetch(`${BASE_URL}/sendOTP`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier }),
@@ -38,7 +38,7 @@ export const patientApi = {
 
   login: async (mobile: string, otp: string, otp_id?: string, selectedHospitalUid?: string): Promise<{ success: boolean; authData?: AuthData; message?: string }> => {
     try {
-      const res = await fetch('https://www.oncarecancer.com/mobile-app/verifyOTP', {
+      const res = await fetch(`${BASE_URL}/verifyOTP`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ export const patientApi = {
         return { success: false, message: 'No active session' };
       }
   
-      const res = await fetch('https://www.oncarecancer.com/mobile-app/logout', {
+      const res = await fetch(`${BASE_URL}/logout`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ export const patientApi = {
         return null;
       }
 
-      const res = await fetch('https://www.oncarecancer.com/mobile-app/getPatientDetails', {
+      const res = await fetch(`${BASE_URL}/getPatientDetails`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

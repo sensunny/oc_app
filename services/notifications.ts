@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from "@/utils/apiClient";
 
 let messaging: any = null;
 
@@ -249,7 +250,7 @@ export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
       'token': token,
     };
 
-    const response = await fetch('https://www.oncarecancer.com/mobile-app/saveFCMToken', {
+    const response = await fetch(`${BASE_URL}/saveFCMToken`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ fcmToken }),

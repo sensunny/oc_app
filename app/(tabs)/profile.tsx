@@ -23,6 +23,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { patientApi } from '@/services/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from "expo-constants";
+
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -46,6 +48,9 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Failed to load documents');
     }
   };
+
+  const appVersion =
+  Constants.expoConfig?.version ?? "N/A";
 
   const handleLogout = async () => {
     // console.log('22');
@@ -185,7 +190,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Version 1.0.0</Text>
+          <Text style={styles.footerText}>Version {appVersion}</Text>
         </View>
       </ScrollView>
     </View>

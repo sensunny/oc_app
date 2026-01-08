@@ -30,20 +30,18 @@ import {
   Sunrise,
   Sunset,
 } from 'lucide-react-native';
+import { BASE_URL } from "@/utils/apiClient";
+
 
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-/* ================= API ================= */
-
-const API = 'https://www.oncarecancer.com/mobile-app/';
-
 const get = async (url: string) => {
   const token = await AsyncStorage.getItem('access_token');
 
-  const res = await fetch(`${API}${url}`, {
+  const res = await fetch(`${BASE_URL}/${url}`, {
     headers: {
       token: `${token}`,
       'Content-Type': 'application/json',
@@ -68,7 +66,7 @@ const get = async (url: string) => {
 const post = async (url: string, body: any) => {
   const token = await AsyncStorage.getItem('access_token');
 
-  const res = await fetch(`${API}${url}`, {
+  const res = await fetch(`${BASE_URL}/${url}`, {
     method: 'POST',
     headers: {
       token: `${token}`,
@@ -459,7 +457,7 @@ export default function BookAppointmentScreen() {
                     try {
                       setIsConfirming(true);
 
-                      await createAppointment(); // 🔥 API INTEGRATION
+                      await createAppointment(); 
 
                       setTimeout(() => {
                         setIsConfirming(false);
