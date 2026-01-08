@@ -424,6 +424,12 @@ const pastAppointments = useMemo(
                       <ActivityIndicator />
                     )}
 
+                    {slots.length === 0 && !slotLoading && (
+                      <Text style={styles.emptyText}>
+                        No slots are available for the selected date. Please try another day.
+                      </Text>
+                    )}
+
                     {(() => {
   const grouped = groupSlotsByTime(slots);
 

@@ -92,6 +92,8 @@ const closeSheet = () => {
     message: '',
   });
 
+  const dropdownAnim = useRef(new Animated.Value(0)).current;
+
 
 
   /* Smooth & glitch-free */
@@ -201,15 +203,16 @@ const closeSheet = () => {
   };
 
   const toggleUidDropdown = () => {
-  LayoutAnimation.configureNext(
-    LayoutAnimation.create(
-      200,
-      LayoutAnimation.Types.easeInEaseOut,
-      LayoutAnimation.Properties.opacity
-    )
-  );
-  setIsUidOpen((prev) => !prev);
+  const toValue = isUidOpen ? 0 : 1;
+  setIsUidOpen(!isUidOpen);
+
+  Animated.timing(dropdownAnim, {
+    toValue,
+    duration: 220,
+    useNativeDriver: false,
+  }).start();
 };
+
 
   return (
     <View style={styles.container}>
@@ -291,71 +294,49 @@ const closeSheet = () => {
               <>
               {hospitalUids.length > 1 ? (
   <>
-    {/* INPUT (unchanged look) */}
-    <Pressable onPress={openSheet}>
-      <View pointerEvents="none">
-        <Input
-          label="Hospital ID"
-          value={selectedHospitalUid || 'Select Hospital ID'}
-          editable={false}
-          error={errors.hospitalUid}
-        />
-      </View>
-    </Pressable>
+    {/* Hospital ID Dropdown */}
+<Pressable onPress={toggleUidDropdown}>
+  <View pointerEvents="none">
+    <Input
+      label="Hospital ID"
+      value={selectedHospitalUid || 'Select Hospital ID'}
+      editable={false}
+      error={errors.hospitalUid}
+    />
+  </View>
+</Pressable>
 
-    {/* BOTTOM SHEET */}
-    <Modal
-      visible={isUidOpen}
-      transparent
-      animationType="none"
-      onRequestClose={closeSheet}
-    >
-      {/* Backdrop */}
-      <Pressable style={styles.sheetBackdrop} onPress={closeSheet} />
-
-      {/* Sheet */}
-      <Animated.View
-        style={[
-          styles.sheetContainer,
-          {
-            transform: [
-              {
-                translateY: sheetAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [400, 0],
-                }),
-              },
-            ],
-          },
-        ]}
+<Animated.View
+  style={[
+    styles.dropdownContainer,
+    {
+      maxHeight: dropdownAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 220],
+      }),
+      opacity: dropdownAnim,
+    },
+  ]}
+>
+  <ScrollView nestedScrollEnabled>
+    {hospitalUids.map((item) => (
+      <Pressable
+        key={item.hospitalUid}
+        onPress={() => {
+          setSelectedHospitalUid(item.hospitalUid);
+          setErrors({ ...errors, hospitalUid: '' });
+          toggleUidDropdown();
+        }}
       >
-        <View style={styles.sheetHandle} />
+        <View style={styles.dropdownOption}>
+          <Text style={styles.dropdownUid}>{item.hospitalUid}</Text>
+          <Text style={styles.dropdownName}>{item.name}</Text>
+        </View>
+      </Pressable>
+    ))}
+  </ScrollView>
+</Animated.View>
 
-        <Text style={styles.sheetTitle}>Select Hospital ID</Text>
-
-        <ScrollView>
-          {hospitalUids.map((item) => (
-            <Pressable
-              key={item.hospitalUid}
-              onPress={() => {
-                setSelectedHospitalUid(item.hospitalUid);
-                setErrors({ ...errors, hospitalUid: '' });
-                closeSheet();
-              }}
-            >
-              <View style={styles.sheetOption}>
-                <Text style={styles.sheetUid}>
-                  {item.hospitalUid}
-                </Text>
-                <Text style={styles.sheetName}>
-                  {item.name}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </Animated.View>
-    </Modal>
   </>
 ) : (
   <Input
@@ -651,6 +632,40 @@ sheetUid: {
 },
 
 sheetName: {
+  fontSize: FONT_SIZES.sm,
+  color: BRAND.textMuted,
+  marginTop: 2,
+},
+
+dropdownContainer: {
+  marginTop: -10,
+  marginBottom: SPACING.md,
+  backgroundColor: '#ffffff',
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+  overflow: 'hidden',
+  shadowColor: '#000',
+  shadowOpacity: 0.12,
+  shadowRadius: 18,
+  shadowOffset: { width: 0, height: 8 },
+  elevation: 12,
+},
+
+dropdownOption: {
+  paddingVertical: 16,
+  paddingHorizontal: 14,
+  borderBottomWidth: 1,
+  borderBottomColor: '#f1f5f9',
+},
+
+dropdownUid: {
+  fontSize: FONT_SIZES.md,
+  fontWeight: '700',
+  color: BRAND.textPrimary,
+},
+
+dropdownName: {
   fontSize: FONT_SIZES.sm,
   color: BRAND.textMuted,
   marginTop: 2,
