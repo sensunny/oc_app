@@ -41,7 +41,6 @@ export default function ProfileScreen() {
     if (!patient) return;
     try {
       const docs = await getPatient();
-      console.log({docs})
       // setDocuments(docs);
     } catch (error) {
       console.error('Error loading documents:', error);

@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState } from '../types';
 import { patientApi } from '../services/api';
 import { cleanupListeners } from '../services/notifications';
 
 interface AuthContextType extends AuthState {
-  login: (identifier: string, otp: string, selectedHospitalUid: string) => Promise<any>;
+  login: (identifier: string, otp: string, selectedHospitalUid: string) => Promise<boolean>;
   sendOTP: (identifier: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshPatient: () => Promise<void>;
@@ -14,13 +14,18 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    patient: null,
-    loading: true
-  });
+const INITIAL_STATE: AuthState = {
+  isAuthenticated: false,
+  patient: null,
+  loading: true, // only for app boot
+};
 
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [authState, setAuthState] = useState<AuthState>(INITIAL_STATE);
+
+  // ============================
+  // App boot auth check
+  // ============================
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -28,20 +33,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAuthStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      if (token) {
-        const patientData = await patientApi.getPatientDetails();
-        setAuthState({
-          isAuthenticated: true,
-          patient: patientData,
-          loading: false,
-        });
-      } else {
+
+      if (!token) {
         setAuthState({
           isAuthenticated: false,
           patient: null,
           loading: false,
         });
+        return;
       }
+
+      const patientData = await patientApi.getPatientDetails();
+
+      setAuthState({
+        isAuthenticated: true,
+        patient: patientData,
+        loading: false,
+      });
     } catch (error) {
       console.error('Auth check error:', error);
       setAuthState({
@@ -52,79 +60,110 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // ============================
+  // OTP
+  // ============================
   const sendOTP = async (identifier: string): Promise<any> => {
     try {
       const result = await patientApi.sendOTP(identifier);
-  
-      if (result.success && result.otp_id) {
-        // Store OTP ID for later use during verification
+
+      if (result?.success && result?.otp_id) {
         await AsyncStorage.setItem('otp_id', result.otp_id);
         await AsyncStorage.setItem('mobile', result.mobile);
-        console.log('OTP sent successfully:', result.message);
-        return result;
       }
-  
-      console.warn('Send OTP failed:', result.message);
+
       return result;
     } catch (error) {
       console.error('Send OTP error:', error);
-      return {message: error};
+      return { success: false, message: 'Failed to send OTP' };
     }
   };
 
-  const login = async (identifier: string, otp: string, selectedHospitalUid: string): Promise<boolean> => {
+  // ============================
+  // Login
+  // ============================
+  const login = async (
+    identifier: string,
+    otp: string,
+    selectedHospitalUid: string
+  ): Promise<boolean> => {
     try {
-      const otp_id = await AsyncStorage.getItem('otp_id') || "";
-      const result = await patientApi.login(identifier, otp, otp_id, selectedHospitalUid);
-      console.log({result})
-      if (result.success) {
-        await AsyncStorage.setItem('access_token', result?.authData?.access_token ?? '');
-        await AsyncStorage.removeItem('otp_id');
-        await getPatient()
-        return true;
-      }
-      return false;
+      const otp_id = (await AsyncStorage.getItem('otp_id')) || '';
+
+      const result = await patientApi.login(
+        identifier,
+        otp,
+        otp_id,
+        selectedHospitalUid
+      );
+
+      if (!result?.success) return false;
+
+      await AsyncStorage.setItem(
+        'access_token',
+        result?.authData?.access_token ?? ''
+      );
+      await AsyncStorage.removeItem('otp_id');
+
+      await getPatient();
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
     }
   };
 
-  const getPatient = async () => {
-    const patientData = await patientApi.getPatientDetails();
-        setAuthState({
-          isAuthenticated: true,
-          loading: false,
-          patient: patientData
-        });
-
-        return patientData
-  }
-
-
-  const logout = async () => {
+  // ============================
+  // Get patient (SAFE refresh)
+  // ============================
+  const getPatient = useCallback(async () => {
     try {
-      const result = await patientApi.logout();
-      if (result.success) {
-        cleanupListeners();
-        await AsyncStorage.removeItem('access_token');
-        await AsyncStorage.removeItem('patient');
-        setAuthState({
-          isAuthenticated: false,
-          patient: null,
-          loading: false,
-        });
-        console.log(result.message);
-      } else {
-        console.warn('Logout failed:', result.message);
-      }
+      const patientData = await patientApi.getPatientDetails();
+
+      // IMPORTANT: do not clear previous patient
+      setAuthState(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        patient: patientData,
+        loading: false,
+      }));
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Get patient error:', error);
+
+      // keep old patient if fetch fails
+      setAuthState(prev => ({
+        ...prev,
+        loading: false,
+      }));
     }
+  }, []);
+
+  // ============================
+  // Manual refresh
+  // ============================
+  const refreshPatient = async () => {
+    await getPatient();
   };
 
-  const refreshPatient = async () => {
-    await checkAuthStatus();
+  // ============================
+  // Logout
+  // ============================
+  const logout = async () => {
+    try {
+      await patientApi.logout();
+    } catch (e) {
+      console.warn('Logout API failed');
+    } finally {
+      cleanupListeners();
+      await AsyncStorage.removeItem('access_token');
+      await AsyncStorage.removeItem('patient');
+
+      setAuthState({
+        isAuthenticated: false,
+        patient: null,
+        loading: false,
+      });
+    }
   };
 
   return (
@@ -135,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         refreshPatient,
         sendOTP,
-        getPatient
+        getPatient,
       }}
     >
       {children}
@@ -145,7 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

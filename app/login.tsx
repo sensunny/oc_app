@@ -24,7 +24,7 @@ import { Input } from '../components/Input';
 import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../constants/theme';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PremiumAlert } from './PremiumAlert';
+import { PremiumAlert } from '../components/PremiumAlert';
 
 const { width } = Dimensions.get('window');
 

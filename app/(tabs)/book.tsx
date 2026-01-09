@@ -31,6 +31,7 @@ import {
   Sunset,
 } from 'lucide-react-native';
 import { APP_VERSION, BASE_URL, DEVICE_DATA } from "@/utils/apiClient";
+import DoctorCard from '../../components/DoctorCard';
 
 
 
@@ -318,12 +319,18 @@ export default function BookAppointmentScreen() {
             loading={stepLoading === 'doctor'}
           >
             {doctors.map((d) => (
-              <Option
-                key={d.id}
-                label={`${d.firstName} ${d.lastName || ''}`}
-                active={doctor?.id === d.id}
-                onPress={() => selectDoctor(d)}
-              />
+              // <Option
+              //   key={d.id}
+              //   label={`${d.firstName} ${d.lastName || ''}`}
+              //   active={doctor?.id === d.id}
+              //   onPress={() => selectDoctor(d)}
+              // />
+              <DoctorCard
+              key={d.id}
+              doctor={d}
+              active={doctor?.id === d.id}
+              onPress={() => selectDoctor(d)}
+            />
             ))}
           </Section>
         )}
