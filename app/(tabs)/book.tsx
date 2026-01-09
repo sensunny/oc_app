@@ -30,7 +30,7 @@ import {
   Sunrise,
   Sunset,
 } from 'lucide-react-native';
-import { BASE_URL } from "@/utils/apiClient";
+import { APP_VERSION, BASE_URL } from "@/utils/apiClient";
 
 
 
@@ -45,6 +45,8 @@ const get = async (url: string) => {
     headers: {
       token: `${token}`,
       'Content-Type': 'application/json',
+      platform: Platform.OS,
+      appversion: APP_VERSION
     },
   });
 
@@ -71,6 +73,8 @@ const post = async (url: string, body: any) => {
     headers: {
       token: `${token}`,
       'Content-Type': 'application/json',
+      platform: Platform.OS,
+      appversion: APP_VERSION
     },
     body: JSON.stringify(body),
   });

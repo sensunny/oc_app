@@ -139,7 +139,7 @@ export default function DocumentsScreen() {
                 <File size={20} color={getDocTypeColor()} />
               </View>
 
-              <View style={styles.documentInfo}>
+              <View>
                 <Text style={styles.documentTitle}>
                   {document.description}
                 </Text>

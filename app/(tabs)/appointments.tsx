@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -24,7 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { appointmentApi } from '../../services/api';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { Sun, Sunrise, Sunset } from 'lucide-react-native';
-import { BASE_URL } from "@/utils/apiClient";
+import { APP_VERSION, BASE_URL } from "@/utils/apiClient";
 
 
 const groupSlotsByTime = (slots: any[]) => {
@@ -64,6 +65,8 @@ const post = async (url: string, body: any) => {
     headers: {
       token: `${token}`,
       'Content-Type': 'application/json',
+      platform: Platform.OS,
+      appversion: APP_VERSION
     },
     body: JSON.stringify(body),
   });

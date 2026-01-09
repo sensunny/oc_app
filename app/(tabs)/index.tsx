@@ -75,7 +75,7 @@ export default function HomeScreen() {
     });
   };
 
-  function combineAddress({ govtIdNum }) {
+  function combineAddress({ govtIdNum }:any) {
     return safeValue(govtIdNum);
   }
   // ====================================

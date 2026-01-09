@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Patient, Document, Notification, AuthData } from '../types';
-import { apiRequest } from '@/utils/apiClient';
+import { apiRequest, APP_VERSION } from '@/utils/apiClient';
 import { BASE_URL } from '@/utils/apiClient';
+import { Platform } from 'react-native';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -10,7 +11,7 @@ export const patientApi = {
     try {
       const res = await fetch(`${BASE_URL}/sendOTP`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', platform: Platform.OS,appversion: APP_VERSION, },
         body: JSON.stringify({ identifier }),
       });
 
@@ -42,6 +43,8 @@ export const patientApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          platform: Platform.OS,
+          appversion: APP_VERSION,
         },
         body: JSON.stringify({
           mobile,
@@ -81,6 +84,8 @@ export const patientApi = {
         headers: {
           'Content-Type': 'application/json',
           token,
+          platform: Platform.OS,
+          appversion: APP_VERSION
         },
       });
   
@@ -113,6 +118,8 @@ export const patientApi = {
         headers: {
           'Content-Type': 'application/json',
           token,
+          platform: Platform.OS,
+          appversion: APP_VERSION
         },
       });
 

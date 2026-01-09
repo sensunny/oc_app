@@ -1,4 +1,8 @@
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+
 export const BASE_URL = "https://www.oncarecancer.com/mobile-app";
+export const APP_VERSION = Constants.expoConfig?.version ?? "N/A";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -17,6 +21,8 @@ export async function apiRequest<T>(
 
   const defaultHeaders: Record<string, string> = {
     "Content-Type": "application/json",
+    platform: Platform.OS,
+    appversion: APP_VERSION,
     ...(token ? { token } : {}),
     ...headers,
   };
