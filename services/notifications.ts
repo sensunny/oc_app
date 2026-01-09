@@ -2,7 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { APP_VERSION, BASE_URL } from "@/utils/apiClient";
+import { APP_VERSION, BASE_URL, DEVICE_DATA } from "@/utils/apiClient";
 
 let messaging: any = null;
 
@@ -250,6 +250,8 @@ export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
       'token': token,
       platform: Platform.OS,
       appversion: APP_VERSION,
+      model: DEVICE_DATA.modelName,
+      osVersion: DEVICE_DATA.osVersion,
     };
 
     const response = await fetch(`${BASE_URL}/saveFCMToken`, {

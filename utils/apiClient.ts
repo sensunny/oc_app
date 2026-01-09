@@ -1,8 +1,14 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 
 export const BASE_URL = "https://www.oncarecancer.com/mobile-app";
 export const APP_VERSION = Constants.expoConfig?.version ?? "N/A";
+
+export const DEVICE_DATA = {
+  modelName: Device.modelName ?? "unknown",
+  osVersion: Device.osVersion ?? "unknown",
+};
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -23,6 +29,8 @@ export async function apiRequest<T>(
     "Content-Type": "application/json",
     platform: Platform.OS,
     appversion: APP_VERSION,
+    model: DEVICE_DATA.modelName,
+    osVersion: DEVICE_DATA.osVersion,
     ...(token ? { token } : {}),
     ...headers,
   };

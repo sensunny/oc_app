@@ -25,7 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { appointmentApi } from '../../services/api';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { Sun, Sunrise, Sunset } from 'lucide-react-native';
-import { APP_VERSION, BASE_URL } from "@/utils/apiClient";
+import { APP_VERSION, BASE_URL, DEVICE_DATA } from "@/utils/apiClient";
 
 
 const groupSlotsByTime = (slots: any[]) => {
@@ -66,7 +66,9 @@ const post = async (url: string, body: any) => {
       token: `${token}`,
       'Content-Type': 'application/json',
       platform: Platform.OS,
-      appversion: APP_VERSION
+      appversion: APP_VERSION,
+      model: DEVICE_DATA.modelName,
+      osVersion: DEVICE_DATA.osVersion,
     },
     body: JSON.stringify(body),
   });

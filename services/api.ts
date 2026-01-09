@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Patient, Document, Notification, AuthData } from '../types';
-import { apiRequest, APP_VERSION } from '@/utils/apiClient';
+import { apiRequest, APP_VERSION, DEVICE_DATA } from '@/utils/apiClient';
 import { BASE_URL } from '@/utils/apiClient';
 import { Platform } from 'react-native';
 
@@ -11,7 +11,8 @@ export const patientApi = {
     try {
       const res = await fetch(`${BASE_URL}/sendOTP`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', platform: Platform.OS,appversion: APP_VERSION, },
+        headers: { 'Content-Type': 'application/json', platform: Platform.OS,appversion: APP_VERSION, model: DEVICE_DATA.modelName,
+            osVersion: DEVICE_DATA.osVersion, },
         body: JSON.stringify({ identifier }),
       });
 
@@ -45,6 +46,8 @@ export const patientApi = {
           'Content-Type': 'application/json',
           platform: Platform.OS,
           appversion: APP_VERSION,
+          model: DEVICE_DATA.modelName,
+          osVersion: DEVICE_DATA.osVersion,
         },
         body: JSON.stringify({
           mobile,
@@ -85,7 +88,9 @@ export const patientApi = {
           'Content-Type': 'application/json',
           token,
           platform: Platform.OS,
-          appversion: APP_VERSION
+          appversion: APP_VERSION,
+          model: DEVICE_DATA.modelName,
+          osVersion: DEVICE_DATA.osVersion,
         },
       });
   
@@ -119,7 +124,9 @@ export const patientApi = {
           'Content-Type': 'application/json',
           token,
           platform: Platform.OS,
-          appversion: APP_VERSION
+          appversion: APP_VERSION,
+          model: DEVICE_DATA.modelName,
+          osVersion: DEVICE_DATA.osVersion,
         },
       });
 
