@@ -1,14 +1,29 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Patient, Document, Notification, AuthData } from '../types';
-import { fetchWrapper, BASE_URL, APP_VERSION, DEVICE_DATA } from '@/utils/fetchWrapper';
+import {
+  fetchWrapper,
+  BASE_URL,
+  APP_VERSION,
+  DEVICE_DATA,
+} from '@/utils/fetchWrapper';
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const patientApi = {
-  sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string, mobile?: string, hospitalUids?: any[], code?: number, data?: any }> => {
+  sendOTP: async (
+    identifier: string
+  ): Promise<{
+    success: boolean;
+    otp_id?: string;
+    message?: string;
+    mobile?: string;
+    hospitalUids?: any[];
+    code?: number;
+    data?: any;
+  }> => {
     try {
-      const data = await fetchWrapper<any>("/sendOTP", {
-        method: "POST",
+      const data = await fetchWrapper<any>('/sendOTP', {
+        method: 'POST',
         body: { identifier },
         skipAuth: true,
       });
@@ -16,7 +31,10 @@ export const patientApi = {
       console.log({ data }, data.code);
 
       if (data.code !== 1) {
-        return { success: false, message: data.message || 'Failed to send OTP' };
+        return {
+          success: false,
+          message: data.message || 'Failed to send OTP',
+        };
       }
 
       return {
@@ -26,7 +44,7 @@ export const patientApi = {
         mobile: data.data.mobile,
         hospitalUids: data.data.hospitalUids,
         code: data.code,
-        data: data.data
+        data: data.data,
       };
     } catch (error) {
       console.error('Send OTP error:', error);
@@ -34,10 +52,15 @@ export const patientApi = {
     }
   },
 
-  login: async (mobile: string, otp: string, otp_id?: string, selectedHospitalUid?: string): Promise<{ success: boolean; authData?: AuthData; message?: string }> => {
+  login: async (
+    mobile: string,
+    otp: string,
+    otp_id?: string,
+    selectedHospitalUid?: string
+  ): Promise<{ success: boolean; authData?: AuthData; message?: string }> => {
     try {
-      const data = await fetchWrapper<any>("/verifyOTP", {
-        method: "POST",
+      const data = await fetchWrapper<any>('/verifyOTP', {
+        method: 'POST',
         body: { mobile, otp, otp_id, hospitalUid: selectedHospitalUid },
         skipAuth: true,
       });
@@ -48,7 +71,10 @@ export const patientApi = {
       };
     } catch (err: any) {
       console.error('Login error:', err);
-      return { success: false, message: err.message || 'Network or server error' };
+      return {
+        success: false,
+        message: err.message || 'Network or server error',
+      };
     }
   },
 
@@ -60,14 +86,21 @@ export const patientApi = {
         return { success: false, message: 'No active session' };
       }
 
-      const data = await fetchWrapper<any>("/logout", {
-        method: "GET",
+      const data = await fetchWrapper<any>('/logout', {
+        method: 'GET',
         token,
       });
 
-      await AsyncStorage.multiRemove(['access_token', 'token_expiresAt', 'otp_id']);
+      await AsyncStorage.multiRemove([
+        'access_token',
+        'token_expiresAt',
+        'otp_id',
+      ]);
 
-      return { success: true, message: data.message || 'Logged out successfully' };
+      return {
+        success: true,
+        message: data.message || 'Logged out successfully',
+      };
     } catch (error: any) {
       console.error('Logout error:', error);
       return { success: false, message: 'Network or server error' };
@@ -75,24 +108,19 @@ export const patientApi = {
   },
 
   getPatientDetails: async (): Promise<Patient | null> => {
-    try {
-      const data = await fetchWrapper<any>("/getPatientDetails", {
-        method: "GET",
-      });
+    const data = await fetchWrapper<any>('/getPatientDetails', {
+      method: 'GET',
+    });
 
-      return data.data || null;
-    } catch (error) {
-      console.error('Get Patient Details error:', error);
-      return null;
-    }
+    return data.data || null;
   },
 };
 
 export const documentApi = {
   getPatientDocuments: async (): Promise<any[] | null> => {
     try {
-      const data = await fetchWrapper<any>("/getPatientDocuments", {
-        method: "GET",
+      const data = await fetchWrapper<any>('/getPatientDocuments', {
+        method: 'GET',
       });
 
       console.log({ data });
@@ -154,13 +182,20 @@ export const notificationApi = {
 };
 
 export const pushTokenApi = {
-  registerToken: async (patientId: string, token: string, deviceInfo: any): Promise<boolean> => {
+  registerToken: async (
+    patientId: string,
+    token: string,
+    deviceInfo: any
+  ): Promise<boolean> => {
     await delay(500);
     console.log('Registering push token:', { patientId, token, deviceInfo });
     return true;
   },
 
-  unregisterToken: async (patientId: string, token: string): Promise<boolean> => {
+  unregisterToken: async (
+    patientId: string,
+    token: string
+  ): Promise<boolean> => {
     await delay(300);
     console.log('Unregistering push token:', { patientId, token });
     return true;
@@ -170,8 +205,8 @@ export const pushTokenApi = {
 export const appointmentApi = {
   getPatientAppointments: async (): Promise<any[] | null> => {
     try {
-      const data = await fetchWrapper<any>("/getPatientAppointments", {
-        method: "GET",
+      const data = await fetchWrapper<any>('/getPatientAppointments', {
+        method: 'GET',
       });
 
       return data?.data?.length ? data.data : [];

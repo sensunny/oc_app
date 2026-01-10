@@ -27,7 +27,7 @@ import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
-  const { patient, getPatient } = useAuth();
+  const { patient, getPatient, loading: isAuthLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const scrollY = new Animated.Value(0);
@@ -39,15 +39,17 @@ export default function HomeScreen() {
   );
 
   const loadPatientData = async () => {
-    if (!patient) return;
+    // Check if we have a token before trying multiple times, but here we just try to fetch.
+    // We allow fetching even if !patient to enable retry from error state.
     try {
       setLoading(true);
       await getPatient();
     } catch (error) {
       console.error('Error loading documents:', error);
       Alert.alert('Error', 'Failed to load documents');
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
   };
 
   // ===== FIX HELPERS (ONLY CHANGE) =====
@@ -85,6 +87,125 @@ export default function HomeScreen() {
     await loadPatientData();
     setRefreshing(false);
   };
+
+  // ===== LOADING SKELETON =====
+  const SkeletonLoader = () => {
+    const pulseAnim = React.useRef(new Animated.Value(0.3)).current;
+
+    React.useEffect(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }, []);
+
+    const SkeletonBox = ({
+      width,
+      height,
+      borderRadius = 8,
+      style,
+    }: {
+      width: number | string;
+      height: number;
+      borderRadius?: number;
+      style?: any;
+    }) => (
+      <Animated.View
+        style={[
+          {
+            width,
+            height,
+            backgroundColor: 'rgba(255,255,255,0.3)',
+            borderRadius,
+            opacity: pulseAnim,
+          },
+          style,
+        ]}
+      />
+    );
+
+    const CardSkeleton = () => (
+      <View style={styles.infoCard}>
+        <View style={styles.iconContainer}>
+          <SkeletonBox width={24} height={24} borderRadius={12} style={{ backgroundColor: '#dfedf6' }} />
+        </View>
+        <View style={styles.infoContent}>
+          <SkeletonBox width={80} height={12} style={{ marginBottom: 6, backgroundColor: '#dfedf6' }} />
+          <SkeletonBox width={150} height={16} style={{ backgroundColor: '#dfedf6' }} />
+        </View>
+      </View>
+    );
+
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#20206b', '#262f82', '#9966ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerBackground}
+        />
+
+        <View style={styles.headerContent}>
+          <View style={styles.logoSmallContainer}>
+            <Image source={{ uri: LOGO_URL }} style={styles.logoSmall} resizeMode="contain" />
+          </View>
+          <View style={styles.welcomeSection}>
+            <SkeletonBox width={100} height={14} style={{ marginBottom: 8 }} />
+            <SkeletonBox width={200} height={32} style={{ marginBottom: 12 }} />
+            <SkeletonBox width={120} height={24} borderRadius={20} />
+          </View>
+        </View>
+
+        <View style={styles.scrollView}>
+          <View style={styles.headerSpacer} />
+          <View style={styles.content}>
+            <View style={styles.quickStatsSection}>
+              <View style={styles.quickStatsGrid}>
+                <View style={styles.quickStatCard}>
+                  <SkeletonBox width={44} height={44} borderRadius={22} style={{ marginBottom: 8, backgroundColor: '#f0f0f0' }} />
+                  <SkeletonBox width={40} height={24} style={{ marginBottom: 4, backgroundColor: '#f0f0f0' }} />
+                  <SkeletonBox width={30} height={12} style={{ backgroundColor: '#f0f0f0' }} />
+                </View>
+                <View style={styles.quickStatCard}>
+                  <SkeletonBox width={44} height={44} borderRadius={22} style={{ marginBottom: 8, backgroundColor: '#f0f0f0' }} />
+                  <SkeletonBox width={40} height={24} style={{ marginBottom: 4, backgroundColor: '#f0f0f0' }} />
+                  <SkeletonBox width={30} height={12} style={{ backgroundColor: '#f0f0f0' }} />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <SkeletonBox width={150} height={24} style={{ marginBottom: 16, backgroundColor: '#e0e0e0' }} />
+              <View style={styles.cardsContainer}>
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const isLoading = loading || isAuthLoading;
+
+  // Show Skeleton ONLY if we are loading AND we have no patient data yet.
+  // This prevents the skeleton from showing during background refreshes if data already exists.
+  if (isLoading && !patient) {
+    return <SkeletonLoader />;
+  }
 
   if (!patient) {
     return (

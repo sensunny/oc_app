@@ -16,6 +16,7 @@ type Props = {
   title: string;
   message: string;
   onClose: () => void;
+  dismissible?: boolean;
 };
 
 export const PremiumAlert = ({
@@ -23,6 +24,7 @@ export const PremiumAlert = ({
   title,
   message,
   onClose,
+  dismissible = true,
 }: Props) => {
   const scale = useRef(new Animated.Value(0.92)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -46,6 +48,8 @@ export const PremiumAlert = ({
   }, [visible]);
 
   const handleClose = () => {
+    if (!dismissible) return; // Prevent closing if not dismissible
+    
     Animated.parallel([
       Animated.timing(scale, {
         toValue: 0.92,
@@ -88,9 +92,11 @@ export const PremiumAlert = ({
 
         <Text style={styles.message}>{message}</Text>
 
-        <Pressable onPress={handleClose} style={styles.button}>
-          <Text style={styles.buttonText}>OK</Text>
-        </Pressable>
+        {dismissible && (
+          <Pressable onPress={handleClose} style={styles.button}>
+            <Text style={styles.buttonText}>OK</Text>
+          </Pressable>
+        )}
       </Animated.View>
     </View>
   );

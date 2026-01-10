@@ -1,17 +1,17 @@
-import { Platform } from "react-native";
-import Constants from "expo-constants";
-import * as Device from "expo-device";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import * as Device from 'expo-device';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = "https://www.oncarecancer.com/mobile-app";
-export const APP_VERSION = Constants.expoConfig?.version ?? "N/A";
+export const BASE_URL = 'https://www.oncarecancer.com/mobile-app';
+export const APP_VERSION = Constants.expoConfig?.version ?? 'N/A';
 
 export const DEVICE_DATA = {
-  modelName: Device.modelName ?? "unknown",
-  osVersion: Device.osVersion ?? "unknown",
+  modelName: Device.modelName ?? 'unknown',
+  osVersion: Device.osVersion ?? 'unknown',
 };
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 interface FetchOptions {
   method?: HttpMethod;
@@ -23,18 +23,24 @@ interface FetchOptions {
 
 // Logout callback - set by AuthContext to avoid circular dependency
 let onUnauthorized: (() => void) | null = null;
+let onUpgradeRequired: ((message: string) => void) | null = null;
 
 export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
 }
 
+export function setUpgradeRequiredHandler(handler: (message: string) => void) {
+  onUpgradeRequired = handler;
+}
+
 export function clearUnauthorizedHandler() {
   onUnauthorized = null;
+  onUpgradeRequired = null;
 }
 
 function getDefaultHeaders(token?: string): Record<string, string> {
   return {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
     platform: Platform.OS,
     appversion: APP_VERSION,
     model: DEVICE_DATA.modelName,
@@ -45,14 +51,20 @@ function getDefaultHeaders(token?: string): Record<string, string> {
 
 export async function fetchWrapper<T = any>(
   endpoint: string,
-  { method = "GET", body, token, headers = {}, skipAuth = false }: FetchOptions = {}
+  {
+    method = 'GET',
+    body,
+    token,
+    headers = {},
+    skipAuth = false,
+  }: FetchOptions = {}
 ): Promise<T> {
-  const url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
 
   // Auto-attach token if not provided and not skipping auth
   let authToken = token;
   if (!authToken && !skipAuth) {
-    authToken = (await AsyncStorage.getItem("access_token")) || undefined;
+    authToken = (await AsyncStorage.getItem('access_token')) || undefined;
   }
 
   const finalHeaders: Record<string, string> = {
@@ -68,11 +80,27 @@ export async function fetchWrapper<T = any>(
 
   // Handle 401 Unauthorized - trigger logout
   if (response.status === 401) {
-    console.warn("401 Unauthorized - triggering logout");
+    console.warn('401 Unauthorized - triggering logout');
     if (onUnauthorized) {
       onUnauthorized();
+      return new Promise(() => {}); // Halt execution to prevent crash during navigation
     }
-    throw new Error("Unauthorized");
+    throw new Error('Unauthorized');
+  }
+
+  // Handle 426 Upgrade Required - force update
+  if (response.status === 426) {
+    console.warn('426 Upgrade Required');
+    const errorData = await response.json().catch(() => ({}));
+    const message =
+      errorData.message ||
+      'A new version of the app is available. Please update to continue.';
+
+    if (onUpgradeRequired) {
+      onUpgradeRequired(message);
+      return new Promise(() => {}); // Halt execution
+    }
+    throw new Error(message);
   }
 
   if (!response.ok) {

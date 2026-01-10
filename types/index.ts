@@ -51,4 +51,5 @@ export interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
   patient: Patient | null;
+  documents?: Document[] | null;
 }

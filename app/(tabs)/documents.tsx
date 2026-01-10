@@ -17,7 +17,6 @@ import {
   File,
 } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { documentApi } from '../../services/api';
 import { Document } from '../../types';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,53 +25,21 @@ import { Linking } from 'react-native';
 const PAGE_SIZE = 8;
 
 export default function DocumentsScreen() {
-  const { patient } = useAuth();
+  const { patient, documents, fetchDocuments } = useAuth();
 
-  const [allDocuments, setAllDocuments] = useState<Document[]>([]);
-  const [visibleDocuments, setVisibleDocuments] = useState<Document[]>([]);
   const [page, setPage] = useState(1);
-
-  const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  /* =========================
-     Background SWR fetch
-  ========================= */
-  const loadDocuments = async (background = false) => {
-    if (!patient) return;
-
-    try {
-      const docs = await documentApi.getPatientDocuments();
-
-      setAllDocuments(prev => {
-        if (prev.length === docs.length) return prev;
-        return docs;
-      });
-
-      setVisibleDocuments(prev => {
-        if (prev.length === 0) {
-          return docs.slice(0, PAGE_SIZE);
-        }
-        return docs.slice(0, page * PAGE_SIZE);
-      });
-    } catch (error) {
-      console.warn('Failed to refresh documents');
-      if (!background) {
-        Alert.alert('Error', 'Failed to load documents');
-      }
-    } finally {
-      setInitialLoad(false);
-      setRefreshing(false);
-    }
-  };
 
   /* =========================
      Load on focus (background)
   ========================= */
   useFocusEffect(
     useCallback(() => {
-      loadDocuments(true);
-    }, [])
+      // Fetch in background if we already have documents
+      if (patient) {
+        fetchDocuments(true);
+      }
+    }, [patient, fetchDocuments])
   );
 
   /* =========================
@@ -80,18 +47,19 @@ export default function DocumentsScreen() {
   ========================= */
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadDocuments(true);
+    await fetchDocuments(true);
+    setRefreshing(false);
   };
 
   /* =========================
-     Pagination
+     Pagination / Derived State
   ========================= */
+  const allDocuments = documents || [];
+  const visibleDocuments = allDocuments.slice(0, page * PAGE_SIZE);
+
   const loadMore = () => {
     if (visibleDocuments.length >= allDocuments.length) return;
-
-    const nextPage = page + 1;
-    setVisibleDocuments(allDocuments.slice(0, nextPage * PAGE_SIZE));
-    setPage(nextPage);
+    setPage(prev => prev + 1);
   };
 
   const formatDate = (dateString: string) =>
@@ -108,8 +76,10 @@ export default function DocumentsScreen() {
   };
 
   /* =========================
-     Skeleton (first load only)
+     Skeleton (ONLY if no documents yet)
   ========================= */
+  const showSkeleton = !documents; // Null means not loaded yet
+
   const SkeletonCard = () => (
     <View style={styles.skeletonCard}>
       <View style={styles.skeletonRow}>
@@ -193,7 +163,7 @@ export default function DocumentsScreen() {
         </Text>
       </View>
 
-      {initialLoad && visibleDocuments.length === 0 ? (
+      {showSkeleton ? (
         <View style={styles.documentsContainer}>
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={`skeleton-${i}`} />
@@ -212,12 +182,10 @@ export default function DocumentsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={
-            !initialLoad ? (
-              <View style={styles.emptyState}>
-                <FileText size={64} color={COLORS.gray} />
-                <Text style={styles.emptyStateText}>No documents yet</Text>
-              </View>
-            ) : null
+            <View style={styles.emptyState}>
+              <FileText size={64} color={COLORS.gray} />
+              <Text style={styles.emptyStateText}>No documents yet</Text>
+            </View>
           }
         />
       )}
