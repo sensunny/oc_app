@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthState } from '../types';
 import { patientApi } from '../services/api';
 import { cleanupListeners } from '../services/notifications';
+import { setUnauthorizedHandler, clearUnauthorizedHandler } from '../utils/fetchWrapper';
 
 interface AuthContextType extends AuthState {
   login: (identifier: string, otp: string, selectedHospitalUid: string) => Promise<boolean>;
@@ -165,6 +166,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
   };
+
+  // ============================
+  // Register 401 Unauthorized Handler
+  // ============================
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      cleanupListeners();
+      AsyncStorage.multiRemove(['access_token', 'patient']);
+      setAuthState({
+        isAuthenticated: false,
+        patient: null,
+        loading: false,
+      });
+    };
+
+    setUnauthorizedHandler(handleUnauthorized);
+
+    return () => {
+      clearUnauthorizedHandler();
+    };
+  }, []);
 
   return (
     <AuthContext.Provider

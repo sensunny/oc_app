@@ -2,7 +2,12 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { APP_VERSION, BASE_URL, DEVICE_DATA } from "@/utils/apiClient";
+import {
+  APP_VERSION,
+  BASE_URL,
+  DEVICE_DATA,
+  fetchWrapper,
+} from '@/utils/fetchWrapper';
 
 let messaging: any = null;
 
@@ -11,7 +16,9 @@ try {
     messaging = require('@react-native-firebase/messaging').default;
   }
 } catch (error) {
-  console.warn('Firebase messaging module not available. This is expected in Expo Go.');
+  console.warn(
+    'Firebase messaging module not available. This is expected in Expo Go.'
+  );
 }
 
 Notifications.setNotificationHandler({
@@ -94,7 +101,9 @@ export const initializeNotifications = async (config: NotificationConfig) => {
   }
 };
 
-export const registerForPushNotifications = async (): Promise<string | null> => {
+export const registerForPushNotifications = async (): Promise<
+  string | null
+> => {
   if (Platform.OS === 'web') {
     return null;
   }
@@ -105,7 +114,8 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
       return null;
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
     if (existingStatus !== 'granted') {
@@ -159,35 +169,40 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
 };
 
 // Helper function to check for duplicate notifications
-const checkDuplicateNotification = async (remoteMessage: any): Promise<boolean> => {
+const checkDuplicateNotification = async (
+  remoteMessage: any
+): Promise<boolean> => {
   try {
     const now = Date.now();
-    const messageId = remoteMessage.messageId || 
-                     remoteMessage.data?.messageId || 
-                     `${remoteMessage.notification?.title}-${remoteMessage.notification?.body}`;
-    
+    const messageId =
+      remoteMessage.messageId ||
+      remoteMessage.data?.messageId ||
+      `${remoteMessage.notification?.title}-${remoteMessage.notification?.body}`;
+
     // Store recent notification IDs to avoid duplicates
-    const recentNotifications = await AsyncStorage.getItem('recent_notifications');
-    const notifications: Array<{id: string, timestamp: number}> = recentNotifications ? 
-      JSON.parse(recentNotifications) : [];
-    
+    const recentNotifications = await AsyncStorage.getItem(
+      'recent_notifications'
+    );
+    const notifications: Array<{ id: string; timestamp: number }> =
+      recentNotifications ? JSON.parse(recentNotifications) : [];
+
     // Clean old entries (older than 10 seconds)
     const filteredNotifications = notifications.filter(
-      n => now - n.timestamp < 10000
+      (n) => now - n.timestamp < 10000
     );
-    
+
     // Check if this is a duplicate
-    const isDuplicate = filteredNotifications.some(n => n.id === messageId);
-    
+    const isDuplicate = filteredNotifications.some((n) => n.id === messageId);
+
     if (!isDuplicate) {
       // Add to recent notifications
       filteredNotifications.push({ id: messageId, timestamp: now });
       await AsyncStorage.setItem(
-        'recent_notifications', 
+        'recent_notifications',
         JSON.stringify(filteredNotifications.slice(-20)) // Keep last 20
       );
     }
-    
+
     return isDuplicate;
   } catch (error) {
     console.error('Error checking duplicate notification:', error);
@@ -245,29 +260,13 @@ export const saveFCMTokenToAPI = async (fcmToken: string): Promise<boolean> => {
       return false;
     }
 
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'token': token,
-      platform: Platform.OS,
-      appversion: APP_VERSION,
-      model: DEVICE_DATA.modelName,
-      osVersion: DEVICE_DATA.osVersion,
-    };
-
-    const response = await fetch(`${BASE_URL}/saveFCMToken`, {
+    const data = await fetchWrapper<any>('/saveFCMToken', {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ fcmToken }),
+      token,
+      body: { fcmToken },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to save FCM token:', errorText);
-      return false;
-    }
-
-    const result = await response.json();
-    console.log('FCM token saved successfully:', result);
+    console.log('FCM token saved successfully:', data);
     return true;
   } catch (error) {
     console.error('Error saving FCM token:', error);

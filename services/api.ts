@@ -1,23 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Patient, Document, Notification, AuthData } from '../types';
-import { apiRequest, APP_VERSION, DEVICE_DATA } from '@/utils/apiClient';
-import { BASE_URL } from '@/utils/apiClient';
-import { Platform } from 'react-native';
+import { fetchWrapper, BASE_URL, APP_VERSION, DEVICE_DATA } from '@/utils/fetchWrapper';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const patientApi = {
   sendOTP: async (identifier: string): Promise<{ success: boolean; otp_id?: string; message?: string, mobile?: string, hospitalUids?: any[], code?: number, data?: any }> => {
     try {
-      const res = await fetch(`${BASE_URL}/sendOTP`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', platform: Platform.OS,appversion: APP_VERSION, model: DEVICE_DATA.modelName,
-            osVersion: DEVICE_DATA.osVersion, },
-        body: JSON.stringify({ identifier }),
+      const data = await fetchWrapper<any>("/sendOTP", {
+        method: "POST",
+        body: { identifier },
+        skipAuth: true,
       });
 
-      const data = await res.json();
-      console.log({data}, data.code)
+      console.log({ data }, data.code);
 
       if (data.code !== 1) {
         return { success: false, message: data.message || 'Failed to send OTP' };
@@ -40,37 +36,19 @@ export const patientApi = {
 
   login: async (mobile: string, otp: string, otp_id?: string, selectedHospitalUid?: string): Promise<{ success: boolean; authData?: AuthData; message?: string }> => {
     try {
-      const res = await fetch(`${BASE_URL}/verifyOTP`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          platform: Platform.OS,
-          appversion: APP_VERSION,
-          model: DEVICE_DATA.modelName,
-          osVersion: DEVICE_DATA.osVersion,
-        },
-        body: JSON.stringify({
-          mobile,
-          otp,
-          otp_id,
-          hospitalUid: selectedHospitalUid
-        }),
+      const data = await fetchWrapper<any>("/verifyOTP", {
+        method: "POST",
+        body: { mobile, otp, otp_id, hospitalUid: selectedHospitalUid },
+        skipAuth: true,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        return { success: false, message: data.message || 'OTP verification failed' };
-      }
-
-      // Assuming your backend returns a patient object on success
       return {
         success: true,
         authData: data.data,
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login error:', err);
-      return { success: false, message: 'Network or server error' };
+      return { success: false, message: err.message || 'Network or server error' };
     }
   },
 
@@ -81,62 +59,28 @@ export const patientApi = {
         console.warn('No access token found for logout');
         return { success: false, message: 'No active session' };
       }
-  
-      const res = await fetch(`${BASE_URL}/logout`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          token,
-          platform: Platform.OS,
-          appversion: APP_VERSION,
-          model: DEVICE_DATA.modelName,
-          osVersion: DEVICE_DATA.osVersion,
-        },
+
+      const data = await fetchWrapper<any>("/logout", {
+        method: "GET",
+        token,
       });
-  
-      const data = await res.json();
-      if (!res.ok) {
-        console.warn('Logout failed:', data.message);
-        return { success: false, message: data.message || 'Logout failed' };
-      }
-  
-      // Clear stored tokens after successful logout
+
       await AsyncStorage.multiRemove(['access_token', 'token_expiresAt', 'otp_id']);
-  
+
       return { success: true, message: data.message || 'Logged out successfully' };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Logout error:', error);
       return { success: false, message: 'Network or server error' };
     }
   },
-  // ---- Get Patient Details ----
+
   getPatientDetails: async (): Promise<Patient | null> => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        console.warn('No access token found');
-        return null;
-      }
-
-      const res = await fetch(`${BASE_URL}/getPatientDetails`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          token,
-          platform: Platform.OS,
-          appversion: APP_VERSION,
-          model: DEVICE_DATA.modelName,
-          osVersion: DEVICE_DATA.osVersion,
-        },
+      const data = await fetchWrapper<any>("/getPatientDetails", {
+        method: "GET",
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        console.warn('Failed to fetch patient details:', data.message);
-        return null;
-      }
-
-      return data.data || null; // Assuming the patient data is under `data`
+      return data.data || null;
     } catch (error) {
       console.error('Get Patient Details error:', error);
       return null;
@@ -147,16 +91,11 @@ export const patientApi = {
 export const documentApi = {
   getPatientDocuments: async (): Promise<any[] | null> => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        console.warn('No access token found');
-        return null;
-      }
+      const data = await fetchWrapper<any>("/getPatientDocuments", {
+        method: "GET",
+      });
 
-      const data = await apiRequest("/getPatientDocuments", { token });
-
-      // const data = await res.json();
-      console.log({data})
+      console.log({ data });
 
       return data?.data?.length ? data.data : [];
     } catch (error) {
@@ -231,13 +170,9 @@ export const pushTokenApi = {
 export const appointmentApi = {
   getPatientAppointments: async (): Promise<any[] | null> => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        console.warn('No access token found');
-        return null;
-      }
-
-      const data = await apiRequest("/getPatientAppointments", { token });
+      const data = await fetchWrapper<any>("/getPatientAppointments", {
+        method: "GET",
+      });
 
       return data?.data?.length ? data.data : [];
     } catch (error) {

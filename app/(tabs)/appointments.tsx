@@ -25,7 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { appointmentApi } from '../../services/api';
 import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { Sun, Sunrise, Sunset } from 'lucide-react-native';
-import { APP_VERSION, BASE_URL, DEVICE_DATA } from "@/utils/apiClient";
+import { APP_VERSION, BASE_URL, DEVICE_DATA, fetchWrapper } from "@/utils/fetchWrapper";
 
 
 const groupSlotsByTime = (slots: any[]) => {
@@ -58,24 +58,13 @@ const retry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
 };
 
 const post = async (url: string, body: any) => {
-  const token = await AsyncStorage.getItem('access_token');
-
-  const res = await fetch(`${BASE_URL}/${url}`, {
+  const data = await fetchWrapper<any>(`/${url}`, {
     method: 'POST',
-    headers: {
-      token: `${token}`,
-      'Content-Type': 'application/json',
-      platform: Platform.OS,
-      appversion: APP_VERSION,
-      model: DEVICE_DATA.modelName,
-      osVersion: DEVICE_DATA.osVersion,
-    },
-    body: JSON.stringify(body),
+    body,
   });
 
-  const json = await res.json();
-  if (json.code !== 1) throw new Error(json.message);
-  return json.data;
+  if (data.code !== 1) throw new Error(data.message);
+  return data.data;
 };
 
 /* ================= HELPERS ================= */
