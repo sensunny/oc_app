@@ -11,7 +11,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const patientApi = {
   sendOTP: async (
-    identifier: string
+    identifier: string,
+    patientname: string
   ): Promise<{
     success: boolean;
     otp_id?: string;
@@ -24,7 +25,7 @@ export const patientApi = {
     try {
       const data = await fetchWrapper<any>('/sendOTP', {
         method: 'POST',
-        body: { identifier },
+        body: { identifier, patientname },
         skipAuth: true,
       });
 
@@ -34,6 +35,9 @@ export const patientApi = {
         return {
           success: false,
           message: data.message || 'Failed to send OTP',
+          code: data.code,
+          data: data.data,
+          mobile: data?.data?.mobile,
         };
       }
 

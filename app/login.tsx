@@ -58,24 +58,6 @@ const BRAND = {
 export default function LoginScreen() {
   const router = useRouter();
   const { login, sendOTP } = useAuth();
-  const sheetAnim = useRef(new Animated.Value(0)).current;
-const openSheet = () => {
-  setIsUidOpen(true);
-  Animated.timing(sheetAnim, {
-    toValue: 1,
-    duration: 260,
-    useNativeDriver: true,
-  }).start();
-};
-
-const closeSheet = () => {
-  Animated.timing(sheetAnim, {
-    toValue: 0,
-    duration: 220,
-    useNativeDriver: true,
-  }).start(() => setIsUidOpen(false));
-};
-
 
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
@@ -107,8 +89,11 @@ const closeSheet = () => {
     );
   }, [step]);
 
-  const handleSendOtp = async () => {
-    Keyboard.dismiss();
+  const [callbackName, setCallbackName] = useState('');
+  const [isCallback, setIsCallback] = useState(false);
+
+  const handleSendOtp = async (patientName?: string) => {
+  Keyboard.dismiss();
   setErrors({ identifier: '', otp: '', hospitalUid: '' });
 
   if (!identifier.trim()) {
@@ -117,43 +102,53 @@ const closeSheet = () => {
   }
 
   setLoading(true);
-  const response: any = await sendOTP(identifier);
+  const response: any = await sendOTP(identifier, callbackName);
   setLoading(false);
 
-    if (response?.code === 1) {
-      setStep('otp');
-      setUserMobile(response.data.mobile);
+  if (response?.code === 1 || response?.data?.code === 1) {
+    setIsCallback(false);
+    setStep('otp');
+    setUserMobile(response.data.mobile);
+    setHospitalUids(response.data.hospitalUids || []);
 
-      // 🔑 NEW
-      setHospitalUids(response.data.hospitalUids || []);
+    if (response.data.hospitalUids?.length === 1) {
+      setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
+    }
+  }
 
-      // Auto-select if only one UID
-      if (response.data.hospitalUids?.length === 1) {
-        setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
-      }
-    } else {
-      // showToast(response?.message || 'Something went wrong', 'error');
-      setAlert({
-        visible: true,
-        title: 'Error',
-        message:
-          response?.message || 'Something went wrong',
-      });
-    }
-    if (response?.code === 3) {
-      // showToast(response?.message, 'error');
-      setAlert({
-        visible: true,
-        title: 'Info',
-        message:
-          response?.message || 'Something went wrong',
-      });
-      return;
-    }
-    // setTimeout(() => {
-    //     setAlert({ ...alert, visible: false });
-    // }, 3500);
-  };
+  if (response?.code === 3) {
+    setIsCallback(true);
+    setAlert({
+      visible: true,
+      title: 'Info',
+      message: response?.message || 'Please request a callback',
+    });
+    return;
+  }
+
+  if (response?.code === 4) {
+  setIsCallback(false);
+  setCallbackName('');
+  setIdentifier('');
+
+  setAlert({
+    visible: true,
+    title: 'Success',
+    message: response?.message || 'Our team will contact you shortly',
+  });
+
+  return;
+}
+
+  if (!response || response?.code !== 1) {
+    setAlert({
+      visible: true,
+      title: 'Error',
+      message: response?.message || 'Something went wrong',
+    });
+  }
+};
+
 
 
   const handleVerifyOtp = async () => {
@@ -258,17 +253,45 @@ const closeSheet = () => {
           {/* Premium Card */}
           <View style={styles.card}>
             <Text style={styles.title}>
-              {step === 'identifier' ? 'Welcome Back' : 'Verify OTP'}
-            </Text>
+  {step === 'identifier'
+    ? isCallback
+      ? 'Request a Callback'
+      : 'Welcome Back'
+    : 'Verify OTP'}
+</Text>
 
-            <Text style={styles.subtitle}>
-              {step === 'identifier'
-                ? 'Access your OnCare medical records securely'
-                : `Enter the code sent to ${userMobile}`}
-            </Text>
+<Text style={styles.subtitle}>
+  {step === 'identifier'
+    ? isCallback
+      ? 'Please share your name and our team will contact you shortly'
+      : 'Access your OnCare medical records securely'
+    : `Enter the code sent to ${userMobile}`}
+</Text>
 
             {step === 'identifier' ? (
               <>
+              {isCallback && (
+              <>
+                <Input
+                  label="Your Name"
+                  value={callbackName}
+                  onChangeText={setCallbackName}
+                  placeholder="Enter your name"
+                />
+
+                <LinearGradient colors={[BRAND.color1, BRAND.color3]} style={styles.cta}>
+                  <Button
+                    title="Get a Callback"
+                    onPress={() => handleSendOtp(callbackName)}
+                    loading={loading}
+                    transparent
+                  />
+                </LinearGradient>
+              </>
+            )}
+                
+               {!isCallback && (
+                <>
                 <Input
                   label="Mobile Number/Hospital Id"
                   value={identifier}
@@ -277,18 +300,16 @@ const closeSheet = () => {
                   keyboardType="phone-pad"
                   error={errors.identifier}
                 />
-
-                <LinearGradient
-                  colors={[BRAND.color1, BRAND.color3]}
-                  style={styles.cta}
-                >
-                  <Button
-                    title="Continue"
-                    onPress={handleSendOtp}
-                    loading={loading}
-                    transparent
-                  />
-                </LinearGradient>
+  <LinearGradient colors={[BRAND.color1, BRAND.color3]} style={styles.cta}>
+    <Button
+      title="Continue"
+      onPress={handleSendOtp}
+      loading={loading}
+      transparent
+    />
+  </LinearGradient>
+  </>
+)}
               </>
             ) : (
               <>
@@ -422,11 +443,11 @@ const styles = StyleSheet.create({
 
   logoContainer: {
     alignItems: 'center',
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
   },
   logo: {
-    width: 160,
-    height: 60,
+    width: 220,
+    height: 90,
     resizeMode: 'contain',
   },
 

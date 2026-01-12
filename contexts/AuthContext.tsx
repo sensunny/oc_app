@@ -8,7 +8,7 @@ import { PremiumAlert } from '../components/PremiumAlert';
 
 interface AuthContextType extends AuthState {
   login: (identifier: string, otp: string, selectedHospitalUid: string) => Promise<boolean>;
-  sendOTP: (identifier: string) => Promise<any>;
+  sendOTP: (identifier: string, patientname: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshPatient: () => Promise<void>;
   getPatient: () => Promise<void>;
@@ -81,9 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ============================
   // OTP
   // ============================
-  const sendOTP = async (identifier: string): Promise<any> => {
+  const sendOTP = async (identifier: string, patientname: string): Promise<any> => {
     try {
-      const result = await patientApi.sendOTP(identifier);
+      const result:any = await patientApi.sendOTP(identifier, patientname);
 
       if (result?.success && result?.otp_id) {
         await AsyncStorage.setItem('otp_id', result.otp_id);

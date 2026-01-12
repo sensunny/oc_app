@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -24,17 +24,52 @@ import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
 import { patientApi } from '@/services/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from "expo-constants";
-
+import { FAQView } from '@/components/FAQView';
+import { fetchWrapper } from '@/utils/fetchWrapper';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { patient, logout, getPatient } = useAuth();
+  const [faqTabs, setFaqTabs] = useState<any[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       loadPatientData();
+      loadFaq();
     }, [])
   );
+
+  const loadFaq = async () => {
+  try {
+    const data = await retry(() =>
+      post('getFaqQuestions', {})
+    );
+    setFaqTabs(data || []);
+  } catch (e) {
+    console.log("e", e)
+    console.warn('FAQ load failed');
+  }
+};
+
+  const retry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
+    try {
+      return await fn();
+    } catch {
+      if (retries <= 0) throw new Error('Failed');
+      await new Promise(r => setTimeout(r, 800));
+      return retry(fn, retries - 1);
+    }
+  };
+  
+  const post = async (url: string, body: any) => {
+    const data = await fetchWrapper<any>(`/${url}`, {
+      method: 'POST',
+      body,
+    });
+  
+    if (data.code !== 1) throw new Error(data.message);
+    return data.data;
+  };
 
 
   const loadPatientData = async () => {
@@ -50,6 +85,9 @@ export default function ProfileScreen() {
 
   const appVersion =
   Constants.expoConfig?.version ?? "N/A";
+
+  const [activeFAQ, setActiveFAQ] = useState<any>(null);
+  
 
   const handleLogout = async () => {
     // console.log('22');
@@ -106,6 +144,10 @@ export default function ProfileScreen() {
     </TouchableOpacity>
   );
 
+  if (activeFAQ) {
+    return <FAQView data={activeFAQ} onClose={() => setActiveFAQ(null)} />;
+  } 
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -133,15 +175,15 @@ export default function ProfileScreen() {
               icon={User}
               onPress={() => router.replace('/(tabs)')}
               title="Personal Details"
-              subtitle="View and update your information"
+              subtitle="View your personal information"
             />
-            <MenuItem
+            {/* <MenuItem
               icon={Phone}
               onPress={() => Linking.openURL(`tel:${patient?.otherData?.oncare_number}`)}
               title="Oncare Support Number"
               subtitle={patient?.otherData?.oncare_number || ''}
               showChevron={false}
-            />
+            /> */}
           </View>
         </View>
 
@@ -161,19 +203,26 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section, { display: "none"}}>
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
           <View style={styles.card}>
             <MenuItem
-              icon={HelpCircle}
-              title="Help & Support"
-              subtitle="Get help and contact support"
+              icon={Phone}
+              onPress={() => Linking.openURL(`tel:${patient?.otherData?.oncare_number}`)}
+              title="Oncare Support Number"
+              subtitle={patient?.otherData?.oncare_number || ''}
+              showChevron={false}
             />
-            <MenuItem
-              icon={Mail}
-              title="Feedback"
-              subtitle="Share your feedback with us"
-            />
+            {faqTabs.map(tab => (
+              <MenuItem
+                key={tab.key}
+                icon={HelpCircle}
+                title={tab.title}
+                subtitle={tab.subtitle}
+                onPress={() => setActiveFAQ(faqTabs[0].page)}
+              />
+            ))}
+
           </View>
         </View>
 

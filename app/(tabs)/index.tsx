@@ -347,11 +347,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
     padding: SPACING.sm,
-    alignSelf: 'flex-start',
-    marginBottom: SPACING.md,
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
     zIndex: -1,
   },
-  logoSmall: { width: 100, height: 32 },
+  logoSmall: { width: 130, height: 40 },
   welcomeSection: { marginTop: SPACING.sm, zIndex: 0 },
   welcomeText: {
     fontSize: FONT_SIZES.md,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   patientName: {
-    fontSize: FONT_SIZES.xxxl,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: '800',
     color: COLORS.white,
     marginBottom: SPACING.sm,
