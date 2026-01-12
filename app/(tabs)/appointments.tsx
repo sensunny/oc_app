@@ -264,7 +264,7 @@ const pastAppointments = useMemo(
       <View style={styles.row}>
         <User size={14} color={COLORS.primary} />
         <Text style={styles.label}>Doctor:</Text>
-        <Text style={styles.value}>{appointment.practitionerName}</Text>
+        <Text style={styles.value}>Dr. {appointment.practitionerName}</Text>
       </View>
 
       <View style={styles.row}>
@@ -398,7 +398,7 @@ const pastAppointments = useMemo(
 
                 <Text style={styles.modalSub}>
                   {rescheduleAppt.visitTypeName} •{' '}
-                  {rescheduleAppt.practitionerName}
+                  Dr. {rescheduleAppt.practitionerName}
                 </Text>
 
                 {!reviewMode ? (
@@ -501,13 +501,23 @@ const pastAppointments = useMemo(
                   </>
                 ) : (
                   <>
-                    <Text style={styles.reviewText}>
-                      Old: {formatDateTime(rescheduleAppt.dateTime)}
-                    </Text>
+                    <View style={styles.comparisonContainer}>
+                      <View style={styles.comparisonItem}>
+                        <Text style={styles.comparisonLabel}>Previous Time</Text>
+                        <Text style={styles.comparisonValueOld}>
+                          {formatDateTime(rescheduleAppt.dateTime)}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.comparisonDivider} />
 
-                    <Text style={styles.reviewText}>                      
-                      New: {formatDateTime(selectedSlot?.dateTime)}
-                    </Text>
+                      <View style={styles.comparisonItem}>
+                        <Text style={styles.comparisonLabel}>New Time</Text>
+                        <Text style={styles.comparisonValueNew}>
+                          {formatDateTime(selectedSlot?.dateTime)}
+                        </Text>
+                      </View>
+                    </View>
 
                     <TouchableOpacity
                       style={styles.primaryBtn}
@@ -806,9 +816,43 @@ slotGroupTitle: {
   color: COLORS.secondary,
 },
 
-slotRow: {
-  gap: 12,
-  paddingVertical: 4,
-},
+  slotRow: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+
+  comparisonContainer: {
+    width: '100%',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    padding: SPACING.md,
+    marginVertical: SPACING.md,
+  },
+  comparisonItem: {
+    marginBottom: SPACING.sm,
+  },
+  comparisonLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  comparisonValueOld: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
+    textDecorationLine: 'line-through',
+  },
+  comparisonValueNew: {
+    fontSize: FONT_SIZES.md + 1,
+    color: '#16A34A',
+    fontWeight: '800',
+  },
+  comparisonDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+  },
 
 });

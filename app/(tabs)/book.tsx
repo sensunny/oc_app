@@ -425,7 +425,7 @@ export default function BookAppointmentScreen() {
                   Review Appointment
                 </Text>
 
-                <ConfirmRow label="Doctor" value={doctor.firstName} />
+                <ConfirmRow label="Doctor" value={`Dr. ${doctor.firstName} ${doctor.lastName || ''}`} />
                 <ConfirmRow label="Date" value={date.toDateString()} />
                 <ConfirmRow label="Time Slot" value={selectedSlot.name} />
 
@@ -473,7 +473,7 @@ export default function BookAppointmentScreen() {
                   Appointment Confirmed
                 </Text>
 
-                <ConfirmRow label="Doctor" value={doctor.firstName} />
+                <ConfirmRow label="Doctor" value={`Dr. ${doctor.firstName} ${doctor.lastName || ''}`} />
                 <ConfirmRow label="Date" value={date.toDateString()} />
                 <ConfirmRow label="Time" value={selectedSlot.name} />
 

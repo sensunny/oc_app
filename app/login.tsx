@@ -62,6 +62,7 @@ export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'identifier' | 'otp'>('identifier');
+  const [loginMethod, setLoginMethod] = useState<'mobile' | 'hospitalUid'>('mobile');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ identifier: '', otp: '', hospitalUid: '' });
   const [userMobile, setUserMobile] = useState('');
@@ -97,7 +98,8 @@ export default function LoginScreen() {
   setErrors({ identifier: '', otp: '', hospitalUid: '' });
 
   if (!identifier.trim()) {
-    setErrors({ identifier: 'Please enter Mobile Number/Hospital Id', otp: '', hospitalUid: '' });
+    const errorMsg = loginMethod === 'mobile' ? 'Please enter Mobile Number' : 'Please enter Hospital UID';
+    setErrors({ identifier: errorMsg, otp: '', hospitalUid: '' });
     return;
   }
 
@@ -264,7 +266,7 @@ export default function LoginScreen() {
   {step === 'identifier'
     ? isCallback
       ? 'Please share your name and our team will contact you shortly'
-      : 'Access your OnCare medical records securely'
+      : 'Access your Oncare medical records securely'
     : `Enter the code sent to ${userMobile}`}
 </Text>
 
@@ -290,26 +292,80 @@ export default function LoginScreen() {
               </>
             )}
                 
-               {!isCallback && (
-                <>
-                <Input
-                  label="Mobile Number/Hospital Id"
-                  value={identifier}
-                  onChangeText={setIdentifier}
-                  placeholder="Mobile Number/Hospital Id"
-                  keyboardType="phone-pad"
-                  error={errors.identifier}
-                />
-  <LinearGradient colors={[BRAND.color1, BRAND.color3]} style={styles.cta}>
-    <Button
-      title="Continue"
-      onPress={handleSendOtp}
-      loading={loading}
-      transparent
-    />
-  </LinearGradient>
-  </>
-)}
+                {!isCallback && (
+                  <>
+                    <View style={styles.tabContainer}>
+                      <Pressable
+                        style={[
+                          styles.tab,
+                          loginMethod === 'mobile' && styles.activeTab,
+                        ]}
+                        onPress={() => {
+                          setLoginMethod('mobile');
+                          setIdentifier('');
+                          setErrors({ ...errors, identifier: '' });
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.tabText,
+                            loginMethod === 'mobile' && styles.activeTabText,
+                          ]}
+                        >
+                          Mobile Number
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.tab,
+                          loginMethod === 'hospitalUid' && styles.activeTab,
+                        ]}
+                        onPress={() => {
+                          setLoginMethod('hospitalUid');
+                          setIdentifier('');
+                          setErrors({ ...errors, identifier: '' });
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.tabText,
+                            loginMethod === 'hospitalUid' && styles.activeTabText,
+                          ]}
+                        >
+                          Hospital UID
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <Input
+                      label={
+                        loginMethod === 'mobile' ? 'Mobile Number' : 'Hospital UID'
+                      }
+                      value={identifier}
+                      onChangeText={setIdentifier}
+                      placeholder={
+                        loginMethod === 'mobile'
+                          ? 'Enter Mobile Number'
+                          : 'Enter Hospital UID'
+                      }
+                      keyboardType={
+                        loginMethod === 'mobile' ? 'phone-pad' : 'phone-pad'
+                      }
+                      error={errors.identifier}
+                    />
+                    <LinearGradient
+                      colors={[BRAND.color1, BRAND.color3]}
+                      style={styles.cta}
+                    >
+                      <Button
+                        title="Continue"
+                        onPress={() => handleSendOtp()}
+                        loading={loading}
+                        transparent
+                      />
+                    </LinearGradient>
+                  </>
+                )}
               </>
             ) : (
               <>
@@ -693,4 +749,34 @@ dropdownName: {
 },
 
 
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: SPACING.lg,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  activeTab: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: BRAND.textMuted,
+  },
+  activeTabText: {
+    color: BRAND.color2,
+    fontWeight: '700',
+  },
 });
