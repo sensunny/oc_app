@@ -16,6 +16,7 @@ export interface Patient {
   aadhar_number: string;
   registeration_center: string;
   access_token: string;
+  otherData?: any;
 }
 
 export interface AuthData {
