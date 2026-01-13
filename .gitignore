@@ -39,3 +39,5 @@ yarn-error.*
 *.apk
 *.apk
 .build-number
+.vscode
+package-lock.json
