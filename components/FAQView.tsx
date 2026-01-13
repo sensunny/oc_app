@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -27,6 +28,9 @@ export function FAQView({ data, onClose }: any) {
   const [showForm, setShowForm] = useState(false);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [userQuery, setUserQuery] = useState('');
+  const [userQueryError, setUserQueryError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const retry = async <T,>(fn: () => Promise<T>, retries = 2): Promise<T> => {
@@ -44,6 +48,7 @@ export function FAQView({ data, onClose }: any) {
       method: 'POST',
       body,
     });
+    console.log("data",data)
 
     if (data.code !== 1) throw new Error(data.message);
     return data.data;
@@ -71,8 +76,11 @@ export function FAQView({ data, onClose }: any) {
       useNativeDriver: true,
     }).start(() => {
       setShowForm(false);
+      setShowForm(false);
       setEmail('');
+      setUserQuery('');
       setEmailError('');
+      setUserQueryError('');
       setIsSuccess(false);
     });
   };
@@ -201,38 +209,80 @@ export function FAQView({ data, onClose }: any) {
                     <Text style={styles.inlineError}>{emailError}</Text>
                   ) : null}
 
+                  <TextInput
+                    value={userQuery}
+                    onChangeText={(v) => {
+                      setUserQuery(v);
+                      if (userQueryError) setUserQueryError('');
+                    }}
+                    placeholder="Concern or Query"
+                    multiline
+                    numberOfLines={4}
+                    style={[
+                      styles.input,
+                      styles.textArea,
+                      userQueryError && { borderColor: COLORS.error },
+                    ]}
+                  />
+
+                  {userQueryError ? (
+                    <Text style={styles.inlineError}>{userQueryError}</Text>
+                  ) : null}
+
                   <Pressable
                     style={[
                       styles.submitBtn,
-                      !isValidEmail(email) && { opacity: 0.6 },
+                      (!isValidEmail(email) || loading) && { opacity: 0.6 },
                     ]}
+                    disabled={loading}
                     onPress={async () => {
-                      const trimmed = email.trim();
+                      if (loading) return;
+                      const trimmedEmail = email.trim();
+                      const trimmedQuery = userQuery.trim();
+                      let hasError = false;
 
-                      if (!trimmed) {
+                      if (!trimmedEmail) {
                         setEmailError('Email is required');
-                        return;
-                      }
-
-                      if (!isValidEmail(trimmed)) {
+                        hasError = true;
+                      } else if (!isValidEmail(trimmedEmail)) {
                         setEmailError('Please enter a valid email address');
-                        return;
+                        hasError = true;
                       }
 
+                      if (trimmedQuery.length < 5) {
+                        setUserQueryError('Query must be at least 5 characters');
+                        hasError = true;
+                      }
+
+                      if (hasError) return;
+
+                      setLoading(true); // Set loading to true
                       try {
                         await retry(() =>
-                          post('askUsEmailQuery', { email: trimmed })
+                          post('askUsEmailQuery', {
+                            email: trimmedEmail,
+                            userquery: trimmedQuery,
+                          })
                         );
 
                         setIsSuccess(true);
                         setEmail('');
+                        setUserQuery('');
                         setEmailError('');
-                      } catch {
+                        setUserQueryError('');
+                      } catch (e) {
+                        console.log("e", e)
                         setEmailError('Something went wrong. Please try again.');
+                      } finally {
+                        setLoading(false); // Set loading to false
                       }
                     }}
                   >
-                    <Text style={styles.submitText}>Submit</Text>
+                    {loading ? ( // Conditional rendering for loading state
+                      <ActivityIndicator color={COLORS.white} />
+                    ) : (
+                      <Text style={styles.submitText}>Submit</Text>
+                    )}
                   </Pressable>
                 </>
               ) : (
@@ -401,6 +451,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
     fontSize: 14,
+  },
+
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
   },
 
   inlineError: {
