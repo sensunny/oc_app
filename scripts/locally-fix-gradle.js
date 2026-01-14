@@ -1,9 +1,5 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const fs = require("fs");
+const path = require("path");
 
 const gradlePath = path.join(__dirname, "..", "android", "gradle.properties");
 
@@ -14,10 +10,12 @@ if (!fs.existsSync(gradlePath)) {
 
 let content = fs.readFileSync(gradlePath, "utf8");
 
+// Replace or add the properties
 const replacements = {
-  "org.gradle.jvmargs":
-    "-Xmx4g -XX:MaxMetaspaceSize=2g -XX:+HeapDumpOnOutOfMemoryError",
-  "org.gradle.parallel": "false",
+  "org.gradle.jvmargs": "-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8",
+  "org.gradle.parallel": "false",           // keep false — parallel can make OOM worse
+  "org.gradle.daemon": "false",             // ← add this sometimes helps local reproducibility
+  "org.gradle.caching": "false",            // ← add if you suspect cache corruption
 };
 
 for (const [key, value] of Object.entries(replacements)) {
@@ -30,4 +28,5 @@ for (const [key, value] of Object.entries(replacements)) {
 }
 
 fs.writeFileSync(gradlePath, content.trim() + "\n", "utf8");
+
 console.log("✅ gradle.properties updated successfully.");
