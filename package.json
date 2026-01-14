@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "local-build": "sudo rm -rf android ios && sudo rm -rf .expo && sudo rm -rf ~/.gradle/caches/ && sudo rm -rf android/.gradle/  && sudo rm -rf .expo .expo-shared && sudo rm -rf ~/.gradle/caches/ && sudo rm -rf ~/.gradle/daemon/ && sudo rm -rf node_modules/.cache && sudo rm -rf ~/.eas/build-cache/ && sudo npm cache clean --force && sudo rm -rf /tmp/metro-* && echo 'going to prebuild' && npx expo prebuild --clean && node scripts/locally-fix-gradle.js && cd android && echo 'gradelw clean now' && ./gradlew clean --no-daemon && cd ../ && echo 'going to build' && NODE_OPTIONS=--max_old_space_size=8192 eas build --platform android --local"
+    "local-build": "sudo rm -rf android ios && sudo rm -rf .expo && sudo rm -rf ~/.gradle/caches/ && sudo rm -rf android/.gradle/  && sudo rm -rf .expo .expo-shared && sudo rm -rf ~/.gradle/caches/ && sudo rm -rf ~/.gradle/daemon/ && sudo rm -rf node_modules/.cache && sudo rm -rf ~/.eas/build-cache/ && sudo npm cache clean --force && sudo rm -rf /tmp/metro-* && echo 'going to prebuild' && npx expo prebuild --clean && node scripts/locally-fix-gradle.js && cd android && echo 'gradelw clean now' && ./gradlew clean --no-daemon && cd ../ && echo 'going to build' && NODE_OPTIONS=--max_old_space_size=8192 eas build --platform android --local",
+    "build:android:local:clean": "rm -rf android ios .expo .expo-shared node_modules/.cache ~/.eas/build-cache /tmp/metro-* && npm cache clean --force && rm -rf node_modules && npm install && npx expo prebuild --clean && node scripts/locally-fix-gradle.js && cd android && chmod +x gradlew && ./gradlew --no-daemon clean && cd .. && NODE_OPTIONS='--max_old_space_size=8192' eas build --platform android --local",
+    "prebuild:clean": "npx expo prebuild --clean",
+    "fix:gradle": "node scripts/locally-fix-gradle.js && cd android && chmod +x gradlew && ./gradlew --no-daemon clean && cd ..",
+    "clean:all": "rm -rf android ios .expo .expo-shared node_modules/.cache ~/.eas/build-cache /tmp/metro-* ~/.gradle/caches ~/.gradle/daemon && npm cache clean --force && rm -rf node_modules"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

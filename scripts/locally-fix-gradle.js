@@ -12,8 +12,10 @@ let content = fs.readFileSync(gradlePath, "utf8");
 
 // Replace or add the properties
 const replacements = {
-  "org.gradle.jvmargs": "-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError",
-  "org.gradle.parallel": "false",
+  "org.gradle.jvmargs": "-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8",
+  "org.gradle.parallel": "false",           // keep false — parallel can make OOM worse
+  "org.gradle.daemon": "false",             // ← add this sometimes helps local reproducibility
+  "org.gradle.caching": "false",            // ← add if you suspect cache corruption
 };
 
 for (const [key, value] of Object.entries(replacements)) {
