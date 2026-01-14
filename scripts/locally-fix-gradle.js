@@ -1,27 +1,26 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs = require("fs");
+const path = require("path");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const gradlePath = path.join(__dirname, '..', 'android', 'gradle.properties');
+const gradlePath = path.join(__dirname, "..", "android", "gradle.properties");
 
 if (!fs.existsSync(gradlePath)) {
   console.error("❌ gradle.properties not found. Run 'expo prebuild' first.");
   process.exit(1);
 }
 
-let content = fs.readFileSync(gradlePath, 'utf8');
+let content = fs.readFileSync(gradlePath, "utf8");
 
 const replacements = {
-  'org.gradle.jvmargs':
-    '-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError',
-  'org.gradle.parallel': 'false',
+  "org.gradle.jvmargs": "-Xmx6g -Dfile.encoding=UTF-8",
+  "org.gradle.daemon": "false",
+  "org.gradle.parallel": "false",
+  "org.gradle.workers.max": "1",
+  "ksp.incremental": "false",
+  "kotlin.compiler.execution.strategy": "in-process",
 };
 
 for (const [key, value] of Object.entries(replacements)) {
-  const regex = new RegExp(`^${key}=.*$`, 'm');
+  const regex = new RegExp(`^${key}=.*$`, "m");
   if (regex.test(content)) {
     content = content.replace(regex, `${key}=${value}`);
   } else {
@@ -29,5 +28,5 @@ for (const [key, value] of Object.entries(replacements)) {
   }
 }
 
-fs.writeFileSync(gradlePath, content.trim() + '\n', 'utf8');
-console.log('✅ gradle.properties updated successfully.');
+fs.writeFileSync(gradlePath, content.trim() + "\n", "utf8");
+console.log("✅ gradle.properties updated successfully.");
