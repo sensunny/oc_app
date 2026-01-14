@@ -11,20 +11,27 @@ if (!fs.existsSync(gradlePath)) {
 let content = fs.readFileSync(gradlePath, "utf8");
 
 const replacements = {
-  "org.gradle.jvmargs": "-Xmx6g -Dfile.encoding=UTF-8",
+  "org.gradle.jvmargs": "-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8",
   "org.gradle.daemon": "false",
   "org.gradle.parallel": "false",
   "org.gradle.workers.max": "1",
   "ksp.incremental": "false",
   "kotlin.compiler.execution.strategy": "in-process",
+  // Kotlin daemon memory (often the real culprit)
+  "kotlin.daemon.jvmargs": "-Xmx2g -XX:MaxMetaspaceSize=512m",
 };
 
+// escape regex special chars in key
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 for (const [key, value] of Object.entries(replacements)) {
-  const regex = new RegExp(`^${key}=.*$`, "m");
+  const regex = new RegExp(`^${escapeRegExp(key)}=.*$`, "m");
+  const line = `${key}=${value}`;
+
   if (regex.test(content)) {
-    content = content.replace(regex, `${key}=${value}`);
+    content = content.replace(regex, line);
   } else {
-    content += `\n${key}=${value}`;
+    content += `\n${line}`;
   }
 }
 
