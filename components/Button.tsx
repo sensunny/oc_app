@@ -2,14 +2,15 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { COLORS, SPACING, FONT_SIZES } from '../constants/theme';
 
-interface ButtonProps {
+export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  transparent?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -20,6 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   style,
   textStyle,
+  transparent = false,
 }) => {
   return (
     <TouchableOpacity
@@ -28,6 +30,8 @@ export const Button: React.FC<ButtonProps> = ({
         variant === 'primary' && styles.primaryButton,
         variant === 'secondary' && styles.secondaryButton,
         variant === 'outline' && styles.outlineButton,
+        variant === 'ghost' && styles.ghostButton,
+        transparent && styles.transparentButton,
         (disabled || loading) && styles.disabledButton,
         style,
       ]}
@@ -36,7 +40,14 @@ export const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? COLORS.primary : COLORS.white} />
+        <ActivityIndicator
+          color={
+            variant === 'outline' || variant === 'ghost'
+              ? COLORS.primary
+              : COLORS.white
+          }
+          size="small"
+        />
       ) : (
         <Text
           style={[
@@ -44,6 +55,8 @@ export const Button: React.FC<ButtonProps> = ({
             variant === 'primary' && styles.primaryButtonText,
             variant === 'secondary' && styles.secondaryButtonText,
             variant === 'outline' && styles.outlineButtonText,
+            variant === 'ghost' && styles.ghostButtonText,
+            transparent && styles.transparentButtonText,
             textStyle,
           ]}
         >
@@ -56,12 +69,12 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: SPACING.md,
+    paddingVertical: 12,
     paddingHorizontal: SPACING.lg,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
+    minHeight: 46,
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
@@ -71,15 +84,22 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.primary,
+  },
+  ghostButton: {
+    backgroundColor: 'transparent',
+  },
+  transparentButton: {
+    backgroundColor: 'transparent',
   },
   disabledButton: {
     opacity: 0.5,
   },
   buttonText: {
-    fontSize: FONT_SIZES.md,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   primaryButtonText: {
     color: COLORS.white,
@@ -89,5 +109,11 @@ const styles = StyleSheet.create({
   },
   outlineButtonText: {
     color: COLORS.primary,
+  },
+  ghostButtonText: {
+    color: COLORS.primary,
+  },
+  transparentButtonText: {
+    color: COLORS.white,
   },
 });

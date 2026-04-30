@@ -1,15 +1,18 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   LayoutAnimation,
   Platform,
   UIManager,
+  TextInput,
+  Image,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -19,52 +22,57 @@ import {
   Clock,
   CheckCircle,
   Stethoscope,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  X,
 } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { router } from 'expo-router';
-import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Sun,
-  Sunrise,
-  Sunset,
-} from 'lucide-react-native';
-import { APP_VERSION, BASE_URL, DEVICE_DATA, fetchWrapper } from "@/utils/fetchWrapper";
+import { COLORS, SPACING, LOGO_URL } from '../../constants/theme';
+import { Sun, Sunrise, Sunset } from 'lucide-react-native';
+import { fetchWrapper } from '@/utils/fetchWrapper';
 import DoctorCard from '../../components/DoctorCard';
-
-
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
+/* ── API helpers (unchanged) ── */
+
 const get = async (url: string) => {
-  const data = await fetchWrapper<any>(`/${url}`, {
-    method: 'GET',
-  });
-
-  if (data.code !== 1) {
-    throw new Error(data.message);
-  }
-
+  const data = await fetchWrapper<any>(`/${url}`, { method: 'GET' });
+  if (data.code !== 1) throw new Error(data.message);
   return data.data;
 };
-
 
 const post = async (url: string, body: any) => {
-  const data = await fetchWrapper<any>(`/${url}`, {
-    method: 'POST',
-    body,
-  });
-
-  if (data.code !== 1) {
-    throw new Error(data.message);
-  }
-
+  const data = await fetchWrapper<any>(`/${url}`, { method: 'POST', body });
+  if (data.code !== 1) throw new Error(data.message);
   return data.data;
 };
 
+const retry = async <T,>(fn: () => Promise<T>, retries = 2, delay = 800): Promise<T> => {
+  try { return await fn(); }
+  catch (error: any) {
+    if (retries <= 0) throw error;
+    if (error?.message?.includes('unauthorized')) throw error;
+    await new Promise((r) => setTimeout(r, delay));
+    return retry(fn, retries - 1, delay);
+  }
+};
+
+const groupSlotsByTime = (slots: any[]) => {
+  const g: { morning: any[]; afternoon: any[]; evening: any[] } = { morning: [], afternoon: [], evening: [] };
+  slots.forEach((sl) => {
+    const h = new Date(sl.dateTime).getHours();
+    if (h >= 5 && h < 12) g.morning.push(sl);
+    else if (h >= 12 && h < 17) g.afternoon.push(sl);
+    else if (h >= 17 && h < 22) g.evening.push(sl);
+  });
+  return g;
+};
 
 /* ================= SCREEN ================= */
 
@@ -87,24 +95,21 @@ export default function BookAppointmentScreen() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  /* ================= RESET ================= */
+  const [locationSearch, setLocationSearch] = useState('');
+  const [doctorSearch, setDoctorSearch] = useState('');
 
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionRefs = useRef<{ [key: string]: number }>({});
+
+  /* ── Reset ── */
   const resetBooking = () => {
     LayoutAnimation.easeInEaseOut();
-    setLocation(null);
-    setDoctor(null);
-    setVisitType(null);
-    setSelectedSlot(null);
-    setSlots([]);
-    setVisitTypes([]);
-    setDoctors([]);
-    setDate(new Date());
-    setShowConfirm(false);
-    setIsConfirming(false);
-    setIsConfirmed(false);
+    setLocation(null); setDoctor(null); setVisitType(null);
+    setSelectedSlot(null); setSlots([]); setVisitTypes([]);
+    setDoctors([]); setDate(new Date()); setShowConfirm(false);
+    setIsConfirming(false); setIsConfirmed(false);
+    setLocationSearch(''); setDoctorSearch('');
   };
-
-  /* ================= RESET ON OPEN ================= */
 
   useFocusEffect(
     useCallback(() => {
@@ -117,384 +122,298 @@ export default function BookAppointmentScreen() {
     }, [])
   );
 
-  /* ================= HELPERS ================= */
-
-  const groupSlotsByTime = (slots: any[]) => {
-  const groups = {
-    morning: [],
-    afternoon: [],
-    evening: [],
+  /* ── Helpers ── */
+  const scrollToSection = (key: string) => {
+    setTimeout(() => {
+      const y = sectionRefs.current[key];
+      if (y !== undefined) scrollRef.current?.scrollTo({ y: y - 10, animated: true });
+    }, 150);
   };
 
-  slots.forEach((slot) => {
-    const hour = new Date(slot.dateTime).getHours();
-
-    if (hour >= 5 && hour < 12) groups.morning.push(slot);
-    else if (hour >= 12 && hour < 17) groups.afternoon.push(slot);
-    else if (hour >= 17 && hour < 22) groups.evening.push(slot);
-  });
-
-  return groups;
-};
-
-
-  const fetchSlots = async (
-    locationId: number,
-    practitionerId: number,
-    d: Date,
-    v: string
-  ) => {
-    if (!locationId || !practitionerId) return;
-
-    setSlots([]);
-    setSelectedSlot(null);
-    setStepLoading('slots');
-
+  const fetchSlots = async (locId: number, docId: number, d: Date, v: string) => {
+    if (!locId || !docId) return;
+    setSlots([]); setSelectedSlot(null); setStepLoading('slots');
     try {
       const data = await post('visit-slots', {
-        locationId,
-        practitionerId,
-        visitTypeName: v,
+        locationId: locId, practitionerId: docId, visitTypeName: v,
         date: d.toISOString().split('T')[0],
       });
       setSlots(data);
-    } catch {
-      Alert.alert('Error', 'Failed to load slots');
-    } finally {
-      setStepLoading(null);
-    }
+    } catch { Alert.alert('Error', 'Failed to load slots'); }
+    finally { setStepLoading(null); }
   };
 
-  const retry = async <T,>(
-  fn: () => Promise<T>,
-  retries = 2,
-  delay = 800
-): Promise<T> => {
-  try {
-    return await fn();
-  } catch (error: any) {
-    if (retries <= 0) throw error;
+  const createAppointment = async () => {
+    if (!doctor || !location || !selectedSlot || !visitType) throw new Error('Missing details');
+    return retry(() => post('create-appointment', {
+      practitionerId: doctor.id, locationId: location.id,
+      dateTime: selectedSlot.dateTime, visitTypeName: visitType,
+    }));
+  };
 
-    // Do NOT retry for 4xx errors
-    if (error?.message?.includes('unauthorized')) {
-      throw error;
-    }
-
-    await new Promise((r) => setTimeout(r, delay));
-    return retry(fn, retries - 1, delay);
-  }
-};
-
-
-
-    const createAppointment = async () => {
-  if (!doctor || !location || !selectedSlot || !visitType) {
-    throw new Error('Missing appointment details');
-  }
-
-  return retry(() =>
-    post('create-appointment', {
-      practitionerId: doctor.id,
-      locationId: location.id,
-      dateTime: selectedSlot.dateTime,
-      visitTypeName: visitType,
-    })
-  );
-};
-
-
-  /* ================= HANDLERS ================= */
-
+  /* ── Handlers ── */
   const selectLocation = async (loc: any) => {
-    setLocation(loc);
-    setDoctor(null);
-    setVisitType(null);
-    setSlots([]);
-    setSelectedSlot(null);
-
+    LayoutAnimation.easeInEaseOut();
+    setLocation(loc); setDoctor(null); setVisitType(null);
+    setSlots([]); setSelectedSlot(null); setDoctorSearch('');
+    scrollToSection('doctor');
     setStepLoading('doctor');
     const data = await post('practitioners', { locationId: loc.id });
-    setDoctors(data);
-    setStepLoading(null);
+    setDoctors(data); setStepLoading(null);
   };
 
   const selectDoctor = async (doc: any) => {
-    setDoctor(doc);
-    setVisitType(null);
-    setSlots([]);
-    setSelectedSlot(null);
-
+    LayoutAnimation.easeInEaseOut();
+    setDoctor(doc); setVisitType(null); setSlots([]); setSelectedSlot(null);
+    scrollToSection('visitType');
     setStepLoading('visitType');
-    const data = await post('visit-types', {
-      locationId: location.id,
-      practitionerId: doc.id,
-    });
+    const data = await post('visit-types', { locationId: location.id, practitionerId: doc.id });
     setVisitTypes(data);
-
-    if (data.length === 1) {
-      setVisitType(data[0]);
-      fetchSlots(location.id, doc.id, date, data[0]);
-    }
+    if (data.length === 1) { setVisitType(data[0]); fetchSlots(location.id, doc.id, date, data[0]); }
     setStepLoading(null);
   };
 
   const onDateConfirm = (d: Date) => {
-    setShowDatePicker(false);
-    setDate(d);
-    if (visitType && location && doctor) {
-      fetchSlots(location.id, doctor.id, d, visitType);
-    }
+    setShowDatePicker(false); setDate(d);
+    if (visitType && location && doctor) fetchSlots(location.id, doctor.id, d, visitType);
   };
 
-  /* ================= UI ================= */
+  const filteredLocations = locations.filter((l) =>
+    `${l.name} ${l.area}`.toLowerCase().includes(locationSearch.toLowerCase())
+  );
+  const filteredDoctors = doctors.filter((d) =>
+    `${d.firstName} ${d.lastName || ''}`.toLowerCase().includes(doctorSearch.toLowerCase())
+  );
 
+  /* ── Progress indicator ── */
+  const currentStep = !location ? 0 : !doctor ? 1 : !visitType ? 2 : !selectedSlot ? 3 : 4;
+  const steps = ['Location', 'Doctor', 'Type', 'Slot'];
+
+  /* ── Render ── */
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#14143C', '#1F2A6D', '#7B5CFA']}
-        style={styles.headerBg}
-      />
+    <View style={st.root}>
+      <LinearGradient colors={[COLORS.primary, COLORS.secondary, COLORS.accent1]} style={st.headerBg} />
 
-      <View style={styles.pageHeader}>
-        <Calendar size={30} color={COLORS.white} />
-        <Text style={styles.pageTitle}>Book Appointment</Text>
-        <Text style={styles.pageSubtitle}>
-          Seamless & priority medical booking
-        </Text>
+      {/* Header */}
+      <View style={st.header}>
+        <Image source={{ uri: LOGO_URL }} style={st.logo} resizeMode="contain" />
+        <Text style={st.headerTitle}>Book Appointment</Text>
+
+        {/* Progress dots */}
+        <View style={st.progressRow}>
+          {steps.map((label, i) => (
+            <View key={label} style={st.progressItem}>
+              <View style={[st.progressDot, i <= currentStep && st.progressDotActive]} />
+              <Text style={[st.progressLabel, i <= currentStep && st.progressLabelActive]}>{label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Section
-          title="Select Care Location"
-          icon={<MapPin color={COLORS.primary} />}
+      <ScrollView ref={scrollRef} contentContainerStyle={st.body} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        {/* ── Location ── */}
+        <SectionCard
+          icon={<MapPin size={16} color={COLORS.accent1} strokeWidth={2.5} />}
+          title="Care Location"
+          selected={location ? `${location.name}, ${location.area}` : undefined}
+          onClear={() => { LayoutAnimation.easeInEaseOut(); resetBooking(); }}
           loading={stepLoading === 'location'}
         >
-          {locations.map((l) => (
-            <Option
-              key={l.id}
-              label={`${l.name}, ${l.area}`}
-              active={location?.id === l.id}
-              onPress={() => selectLocation(l)}
-            />
-          ))}
-        </Section>
+          {!location && (
+            <>
+              {locations.length > 3 && <SearchInput value={locationSearch} onChange={setLocationSearch} placeholder="Search locations..." />}
+              {filteredLocations.map((l) => (
+                <OptionRow key={l.id} label={`${l.name}, ${l.area}`} onPress={() => selectLocation(l)} />
+              ))}
+              {filteredLocations.length === 0 && !stepLoading && <Text style={st.empty}>No locations found</Text>}
+            </>
+          )}
+        </SectionCard>
 
+        {/* ── Doctor ── */}
         {location && (
-          <Section
-            title="Consulting Doctor"
-            icon={<User color={COLORS.primary} />}
-            loading={stepLoading === 'doctor'}
-          >
-            {doctors.map((d) => (
-              // <Option
-              //   key={d.id}
-              //   label={`${d.firstName} ${d.lastName || ''}`}
-              //   active={doctor?.id === d.id}
-              //   onPress={() => selectDoctor(d)}
-              // />
-              <DoctorCard
-              key={d.id}
-              doctor={d}
-              active={doctor?.id === d.id}
-              onPress={() => selectDoctor(d)}
-            />
-            ))}
-          </Section>
-        )}
-
-        {doctor && (
-          <Section
-            title="Type of Consultation"
-            icon={<Stethoscope color={COLORS.primary} />}
-            loading={stepLoading === 'visitType'}
-          >
-            {visitTypes.map((v) => (
-              <Option
-                key={v}
-                label={v}
-                active={visitType === v}
-                onPress={() => {
-                  setVisitType(v);
-                  fetchSlots(location.id, doctor.id, date, v);
-                }}
-              />
-            ))}
-          </Section>
-        )}
-
-        {visitType && (
-          <Section
-            title="Preferred Appointment Date"
-            icon={<Calendar color={COLORS.primary} />}
-          >
-            <TouchableOpacity
-              style={styles.dateCard}
-              onPress={() => setShowDatePicker(true)}
+          <View onLayout={(e) => { sectionRefs.current['doctor'] = e.nativeEvent.layout.y; }}>
+            <SectionCard
+              icon={<User size={16} color={COLORS.accent1} strokeWidth={2.5} />}
+              title="Consulting Doctor"
+              onClear={() => { LayoutAnimation.easeInEaseOut(); setDoctor(null); setVisitType(null); setSlots([]); setSelectedSlot(null); }}
+              loading={stepLoading === 'doctor'}
             >
-              <Text style={styles.dateText}>
-                {date.toLocaleDateString('en-IN', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </Text>
-              <Text style={styles.dateHint}>Tap to change date</Text>
-            </TouchableOpacity>
-          </Section>
+              {doctor ? (
+                <DoctorCard doctor={doctor} active={true} onPress={() => {}} />
+              ) : (
+                <>
+                  {doctors.length > 3 && <SearchInput value={doctorSearch} onChange={setDoctorSearch} placeholder="Search doctors..." />}
+                  {filteredDoctors.map((d) => (
+                    <DoctorCard key={d.id} doctor={d} active={false} onPress={() => selectDoctor(d)} />
+                  ))}
+                  {filteredDoctors.length === 0 && !stepLoading && <Text style={st.empty}>No doctors found</Text>}
+                </>
+              )}
+            </SectionCard>
+          </View>
         )}
 
+        {/* ── Visit Type ── */}
+        {doctor && (
+          <View onLayout={(e) => { sectionRefs.current['visitType'] = e.nativeEvent.layout.y; }}>
+            <SectionCard
+              icon={<Stethoscope size={16} color={COLORS.accent1} strokeWidth={2.5} />}
+              title="Consultation Type"
+              selected={visitType || undefined}
+              onClear={() => { LayoutAnimation.easeInEaseOut(); setVisitType(null); setSlots([]); setSelectedSlot(null); }}
+              loading={stepLoading === 'visitType'}
+            >
+              {!visitType && visitTypes.map((v) => (
+                <OptionRow key={v} label={v} onPress={() => {
+                  LayoutAnimation.easeInEaseOut();
+                  setVisitType(v); fetchSlots(location.id, doctor.id, date, v);
+                  scrollToSection('slots');
+                }} />
+              ))}
+            </SectionCard>
+          </View>
+        )}
+
+        {/* ── Date + Slots ── */}
         {visitType && (
-          <Section
-            title="Available Time Slots"
-            icon={<Clock color={COLORS.primary} />}
-            loading={stepLoading === 'slots'}
-          >
-            {slots.length === 0 && !stepLoading && (
-              <Text style={styles.emptyText}>
-                No slots are available for the selected date. Please try another day.
-              </Text>
-            )}
+          <View onLayout={(e) => { sectionRefs.current['slots'] = e.nativeEvent.layout.y; }}>
+            <SectionCard
+              icon={<Clock size={16} color={COLORS.accent1} strokeWidth={2.5} />}
+              title="Date & Time"
+              loading={stepLoading === 'slots'}
+            >
+              {/* Date picker */}
+              <TouchableOpacity style={st.datePicker} onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+                <Calendar size={16} color={COLORS.primary} />
+                <Text style={st.dateText}>
+                  {date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                </Text>
+                <ChevronDown size={16} color={COLORS.gray} />
+              </TouchableOpacity>
 
-            {(() => {
-  const grouped = groupSlotsByTime(slots);
-
-  const renderGroup = (title: string, data: any[]) => {
-    if (!data.length) return null;
-
-    return (
-      <View style={{ marginBottom: SPACING.lg }}>
-        <View style={styles.slotGroupHeader}>
-  {title === 'Morning' && <Sunrise size={18} color={COLORS.primary} />}
-  {title === 'Afternoon' && <Sun size={18} color={COLORS.primary} />}
-  {title === 'Evening' && <Sunset size={18} color={COLORS.primary} />}
-
-  <Text style={styles.slotGroupTitle}>{title}</Text>
-</View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.slotRow}
-        >
-          {data.map((s) => (
-            <Slot
-              key={s.dateTime}
-              label={s.name}
-              active={selectedSlot?.dateTime === s.dateTime}
-              onPress={() => setSelectedSlot(s)}
-            />
-          ))}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  return (
-    <>
-      {renderGroup('Morning', grouped.morning)}
-      {renderGroup('Afternoon', grouped.afternoon)}
-      {renderGroup('Evening', grouped.evening)}
-    </>
-  );
-})()}
-
-          </Section>
+              {/* Slots */}
+              {slots.length === 0 && !stepLoading && (
+                <Text style={st.empty}>No slots available. Try another date.</Text>
+              )}
+              {(() => {
+                const grouped = groupSlotsByTime(slots);
+                const renderGroup = (title: string, data: any[], Icon: any) => {
+                  if (!data.length) return null;
+                  return (
+                    <View style={st.slotGroup} key={title}>
+                      <View style={st.slotGroupHead}>
+                        <Icon size={14} color={COLORS.gray} />
+                        <Text style={st.slotGroupLabel}>{title}</Text>
+                      </View>
+                      <View style={st.slotWrap}>
+                        {data.map((sl) => {
+                          const active = selectedSlot?.dateTime === sl.dateTime;
+                          return (
+                            <TouchableOpacity key={sl.dateTime} style={[st.slotChip, active && st.slotChipActive]} onPress={() => setSelectedSlot(sl)}>
+                              <Text style={[st.slotChipText, active && st.slotChipTextActive]}>{sl.name}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                };
+                return (
+                  <>
+                    {renderGroup('Morning', grouped.morning, Sunrise)}
+                    {renderGroup('Afternoon', grouped.afternoon, Sun)}
+                    {renderGroup('Evening', grouped.evening, Sunset)}
+                  </>
+                );
+              })()}
+            </SectionCard>
+          </View>
         )}
+
+        <View style={{ height: 110 }} />
       </ScrollView>
 
+      {/* ── CTA ── */}
       {selectedSlot && (
-        <View style={styles.cta}>
-          <TouchableOpacity
-            style={styles.ctaButton}
-            onPress={() => setShowConfirm(true)}
-          >
-            <Text style={styles.ctaText}>Review Appointment</Text>
-          </TouchableOpacity>
+        <View style={st.ctaBar}>
+          <LinearGradient colors={[COLORS.primary, COLORS.accent1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.ctaGradient}>
+            <TouchableOpacity style={st.ctaBtn} onPress={() => setShowConfirm(true)} activeOpacity={0.85}>
+              <Text style={st.ctaText}>Review Appointment</Text>
+              <ChevronRight size={18} color={COLORS.white} />
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       )}
 
-      {/* ================= CONFIRM + SUCCESS POPUP ================= */}
-
+      {/* ── Confirm / Success ── */}
       {showConfirm && (
-        <View style={styles.overlay}>
-          <View style={styles.confirmCard}>
+        <View style={st.overlay}>
+          <View style={st.modal}>
             {!isConfirmed ? (
               <>
-                <Text style={styles.confirmTitleCentered}>
-                  Review Appointment
-                </Text>
+                {/* Review header */}
+                <View style={st.modalIconWrap}>
+                  <Calendar size={22} color={COLORS.primary} />
+                </View>
+                <Text style={st.modalTitle}>Review Appointment</Text>
+                <Text style={st.modalSub}>Please confirm your booking details</Text>
 
-                <ConfirmRow label="Doctor" value={`Dr. ${doctor.firstName} ${doctor.lastName || ''}`} />
-                <ConfirmRow label="Date" value={date.toDateString()} />
-                <ConfirmRow label="Time Slot" value={selectedSlot.name} />
+                {/* Details card */}
+                <View style={st.modalDetailsCard}>
+                  <DetailRow icon={<User size={14} color={COLORS.accent1} />} label="Doctor" value={`Dr. ${doctor.firstName} ${doctor.lastName || ''}`} />
+                  <View style={st.modalRowDivider} />
+                  <DetailRow icon={<MapPin size={14} color={COLORS.accent1} />} label="Location" value={`${location.name}, ${location.area}`} />
+                  <View style={st.modalRowDivider} />
+                  <DetailRow icon={<Calendar size={14} color={COLORS.accent1} />} label="Date" value={date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} />
+                  <View style={st.modalRowDivider} />
+                  <DetailRow icon={<Clock size={14} color={COLORS.accent1} />} label="Time" value={selectedSlot.name} />
+                  <View style={st.modalRowDivider} />
+                  <DetailRow icon={<Stethoscope size={14} color={COLORS.accent1} />} label="Type" value={visitType!} />
+                </View>
 
-                <TouchableOpacity
-                    style={[
-    styles.confirmBtn,
-    isConfirming && { opacity: 0.6 },
-  ]}
-  disabled={isConfirming}
-                  onPress={async () => {
+                <LinearGradient colors={[COLORS.primary, COLORS.accent1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.modalBtnGradient}>
+                  <TouchableOpacity style={st.modalBtn} disabled={isConfirming} onPress={async () => {
                     try {
                       setIsConfirming(true);
-
-                      await createAppointment(); 
-
-                      setTimeout(() => {
-                        setIsConfirming(false);
-                        setIsConfirmed(true);
-                      }, 1000);
-                    } catch (err: any) {
-                      setIsConfirming(false);
-                      Alert.alert('Error', err.message || 'Failed to book appointment');
-                    }
-                  }}
-                >
-                  {isConfirming ? (
-                    <ActivityIndicator color={COLORS.white} />
-                  ) : (
-                    <Text style={styles.confirmBtnText}>
-                      Confirm Appointment
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                      await createAppointment();
+                      setTimeout(() => { setIsConfirming(false); setIsConfirmed(true); }, 800);
+                    } catch (err: any) { setIsConfirming(false); Alert.alert('Error', err.message || 'Failed'); }
+                  }}>
+                    {isConfirming ? <ActivityIndicator color={COLORS.white} size="small" /> : <Text style={st.modalBtnText}>Confirm Appointment</Text>}
+                  </TouchableOpacity>
+                </LinearGradient>
 
                 {!isConfirming && (
-                  <TouchableOpacity onPress={() => setShowConfirm(false)}>
-                    <Text style={styles.backText}>Modify Selection</Text>
+                  <TouchableOpacity onPress={() => setShowConfirm(false)} style={st.modalBackWrap}>
+                    <Text style={st.modalBack}>Modify Selection</Text>
                   </TouchableOpacity>
                 )}
               </>
             ) : (
               <>
-                <CheckCircle size={72} color="#22C55E" />
-                <Text style={styles.successTitle}>
-                  Appointment Confirmed
-                </Text>
+                {/* Success header */}
+                <View style={st.successIconWrap}>
+                  <CheckCircle size={32} color={COLORS.white} />
+                </View>
+                <Text style={st.successTitle}>Appointment Confirmed!</Text>
+                <Text style={st.successSub}>Your booking has been scheduled successfully</Text>
 
-                <ConfirmRow label="Doctor" value={`Dr. ${doctor.firstName} ${doctor.lastName || ''}`} />
-                <ConfirmRow label="Date" value={date.toDateString()} />
-                <ConfirmRow label="Time" value={selectedSlot.name} />
+                {/* Details card */}
+                <View style={st.modalDetailsCard}>
+                  <DetailRow icon={<User size={14} color={COLORS.accent1} />} label="Doctor" value={`Dr. ${doctor.firstName} ${doctor.lastName || ''}`} />
+                  <View style={st.modalRowDivider} />
+                  <DetailRow icon={<Calendar size={14} color={COLORS.accent1} />} label="Date" value={date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} />
+                  <View style={st.modalRowDivider} />
+                  <DetailRow icon={<Clock size={14} color={COLORS.accent1} />} label="Time" value={selectedSlot.name} />
+                </View>
 
-                <TouchableOpacity
-                  style={styles.successPrimaryBtn}
-                  onPress={resetBooking}
-                >
-                  <Text style={styles.successPrimaryText}>
-                    Schedule New Appointment
-                  </Text>
+                <TouchableOpacity style={st.successPrimaryBtn} onPress={resetBooking}>
+                  <Text style={st.successPrimaryText}>Book Another Appointment</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    resetBooking();
-                    router.replace('/appointments');
-                  }}
-                >
-                  <Text style={styles.successSecondaryText}>
-                    View All Appointments
-                  </Text>
+                <TouchableOpacity onPress={() => { resetBooking(); router.replace('/appointments'); }} style={st.modalBackWrap}>
+                  <Text style={st.modalBack}>View All Appointments</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -502,344 +421,249 @@ export default function BookAppointmentScreen() {
         </View>
       )}
 
-      <DateTimePickerModal
-        isVisible={showDatePicker}
-        mode="date"
-        minimumDate={new Date()}
-        onConfirm={onDateConfirm}
-        onCancel={() => setShowDatePicker(false)}
-      />
+      <DateTimePickerModal isVisible={showDatePicker} mode="date" minimumDate={new Date()} onConfirm={onDateConfirm} onCancel={() => setShowDatePicker(false)} />
     </View>
   );
 }
 
-/* ================= COMPONENTS ================= */
+/* ================= SUB-COMPONENTS ================= */
 
-const Section = ({ title, icon, loading, children }: any) => (
-  <View style={styles.section}>
-    <View style={styles.sectionHeader}>
-      {icon}
-      <Text style={styles.sectionTitle}>{title}</Text>
+const Skeleton = () => {
+  const anim = useRef(new Animated.Value(0.35)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(anim, { toValue: 1, duration: 650, useNativeDriver: true }),
+      Animated.timing(anim, { toValue: 0.35, duration: 650, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return (
+    <View style={{ gap: 10, paddingTop: 6 }}>
+      <Animated.View style={{ width: '75%', height: 40, borderRadius: 12, backgroundColor: '#eef0f6', opacity: anim }} />
+      <Animated.View style={{ width: '90%', height: 40, borderRadius: 12, backgroundColor: '#eef0f6', opacity: anim }} />
     </View>
-    {loading ? (
-      <View style={{ marginTop: SPACING.md }}>
-        <ActivityIndicator color={COLORS.primary} />
+  );
+};
+
+const SectionCard = ({ icon, title, selected, onClear, loading, children }: any) => (
+  <View style={st.card}>
+    <View style={st.cardHead}>
+      <View style={st.cardIconWrap}>{icon}</View>
+      <Text style={st.cardTitle}>{title}</Text>
+      {selected && onClear && (
+        <TouchableOpacity onPress={onClear} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <X size={16} color={COLORS.gray} />
+        </TouchableOpacity>
+      )}
+    </View>
+    {selected ? (
+      <View style={st.selectedPill}>
+        <CheckCircle size={14} color={COLORS.success} />
+        <Text style={st.selectedText} numberOfLines={1}>{selected}</Text>
       </View>
-    ) : (
-      children
+    ) : loading ? <Skeleton /> : children}
+  </View>
+);
+
+const SearchInput = ({ value, onChange, placeholder }: { value: string; onChange: (t: string) => void; placeholder: string }) => (
+  <View style={st.searchBar}>
+    <Search size={15} color={COLORS.gray} />
+    <TextInput style={st.searchText} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={COLORS.gray} />
+    {value.length > 0 && (
+      <TouchableOpacity onPress={() => onChange('')}><X size={14} color={COLORS.gray} /></TouchableOpacity>
     )}
   </View>
 );
 
-const Option = ({ label, onPress, active }: any) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.option, active && styles.optionActive]}
-  >
-    <Text style={styles.optionText}>{label}</Text>
+const OptionRow = ({ label, onPress }: { label: string; onPress: () => void }) => (
+  <TouchableOpacity style={st.optionRow} onPress={onPress} activeOpacity={0.6}>
+    <Text style={st.optionLabel}>{label}</Text>
+    <ChevronRight size={16} color={COLORS.border} />
   </TouchableOpacity>
 );
 
-const Slot = ({ label, onPress, active }: any) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.slot, active && styles.slotActive]}
-  >
-    <Text style={[styles.slotText, active && styles.slotTextActive]}>
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
-
-const ConfirmRow = ({ label, value }: any) => (
-  <View style={styles.confirmRow}>
-    <Text style={styles.confirmLabel}>{label}</Text>
-    <Text style={styles.confirmValue}>{value}</Text>
+const DetailRow = ({ icon, label, value }: { icon?: any; label: string; value: string }) => (
+  <View style={st.detailRow}>
+    <View style={st.detailLeft}>
+      {icon && <View style={st.detailIconWrap}>{icon}</View>}
+      <Text style={st.detailLabel}>{label}</Text>
+    </View>
+    <Text style={st.detailValue} numberOfLines={2}>{value}</Text>
   </View>
 );
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F6FA' },
-  headerBg: { position: 'absolute', height: 200, left: 0, right: 0 },
+const st = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#f4f5f9' },
+  headerBg: { position: 'absolute', height: 220, left: 0, right: 0 },
 
-  pageHeader: {
-    paddingTop: 60,
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
+  /* Header */
+  header: { paddingTop: 48, paddingHorizontal: 22, paddingBottom: 10, alignItems: 'center' },
+  logo: { width: 105, height: 32, marginBottom: 12 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: COLORS.white, letterSpacing: -0.2, marginBottom: 14 },
 
-  pageTitle: {
-    fontSize: FONT_SIZES.xl + 4,
-    fontWeight: '800',
-    color: COLORS.white,
-    marginTop: 6,
-  },
+  /* Progress */
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  progressItem: { alignItems: 'center', gap: 4 },
+  progressDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
+  progressDotActive: { backgroundColor: COLORS.white, width: 10, height: 10, borderRadius: 5 },
+  progressLabel: { fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+  progressLabelActive: { color: 'rgba(255,255,255,0.9)' },
 
-  pageSubtitle: {
-    marginTop: 6,
-    fontSize: FONT_SIZES.sm + 1,
-    color: 'rgba(255,255,255,0.8)',
-  },
+  /* Body */
+  body: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40 },
 
-  content: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.xl,
-  },
-
-  section: {
+  /* Card */
+  card: {
     backgroundColor: COLORS.white,
-    borderRadius: 18,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-  },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: SPACING.md + 4,
-  },
-
-  sectionTitle: {
-    fontSize: FONT_SIZES.md + 1,
-    fontWeight: '700',
-  },
-
-  option: {
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.sm,
+    borderColor: 'rgba(238,240,248,0.9)',
   },
-
-  optionActive: {
-    backgroundColor: '#EEF2FF',
-    borderColor: COLORS.primary,
+  cardHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  cardIconWrap: {
+    width: 30, height: 30, borderRadius: 10,
+    backgroundColor: COLORS.accent1 + '12',
+    alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.primary, flex: 1 },
 
-  optionText: {
-    fontSize: FONT_SIZES.sm + 1,
-    fontWeight: '600',
+  /* Selected pill */
+  selectedPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.success + '0A',
+    paddingVertical: 10, paddingHorizontal: 14,
+    borderRadius: 12, borderWidth: 1, borderColor: COLORS.success + '20',
   },
+  selectedText: { fontSize: 13, fontWeight: '600', color: COLORS.primary, flex: 1 },
 
-  dateCard: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFF',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  /* Search */
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#f4f5f9', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10,
   },
+  searchText: { flex: 1, fontSize: 13, color: COLORS.primary, padding: 0, outlineStyle: 'none' } as any,
 
-  dateText: {
-    fontSize: FONT_SIZES.md + 1,
-    fontWeight: '700',
+  /* Option row */
+  optionRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 13, paddingHorizontal: 14,
+    borderRadius: 14, marginBottom: 6,
+    backgroundColor: '#fafbfe',
+    borderWidth: 1, borderColor: '#f0f1f6',
   },
+  optionLabel: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
 
-  dateHint: {
-    marginTop: 8,
-    fontSize: FONT_SIZES.xs + 1,
-    color: COLORS.textSecondary,
+  /* Date picker */
+  datePicker: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#f4f5f9', borderRadius: 14,
+    paddingVertical: 13, paddingHorizontal: 14,
+    marginBottom: 16, borderWidth: 1, borderColor: '#f0f1f6',
   },
+  dateText: { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.primary },
 
-  slotGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginTop: SPACING.sm,
+  /* Slot groups */
+  slotGroup: { marginBottom: 16 },
+  slotGroupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  slotGroupLabel: { fontSize: 12, fontWeight: '600', color: COLORS.gray, letterSpacing: 0.2 },
+  slotWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  slotChip: {
+    paddingVertical: 10, paddingHorizontal: 16,
+    borderRadius: 12, backgroundColor: '#fafbfe',
+    borderWidth: 1, borderColor: '#f0f1f6',
   },
-
-  slot: {
-    width: '48%',
-    paddingVertical: 18,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-    alignItems: 'center',
+  slotChipActive: {
+    backgroundColor: COLORS.primary, borderColor: COLORS.primary,
+    shadowColor: COLORS.primary, shadowOpacity: 0.15, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
+  slotChipText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
+  slotChipTextActive: { color: COLORS.white },
 
-  slotActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+  empty: { textAlign: 'center', marginVertical: 16, color: COLORS.gray, fontSize: 13 },
+
+  /* CTA */
+  ctaBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+    backgroundColor: 'rgba(244,245,249,0.95)',
   },
-
-  slotText: {
-    fontSize: FONT_SIZES.sm + 1,
-    fontWeight: '700',
+  ctaGradient: { borderRadius: 14 },
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 14, gap: 6,
   },
+  ctaText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
 
-  slotTextActive: {
-    color: COLORS.white,
-  },
-
-  emptyText: {
-    textAlign: 'center',
-    marginTop: SPACING.md,
-    color: COLORS.textSecondary,
-  },
-
-  cta: {
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
-  },
-
-  ctaButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 18,
-    borderRadius: 18,
-    alignItems: 'center',
-  },
-
-  ctaText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.md + 1,
-    fontWeight: '800',
-  },
-
+  /* Modal */
   overlay: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
+    position: 'absolute', inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modal: {
+    backgroundColor: COLORS.white, borderRadius: 24, padding: 26, width: '90%',
     alignItems: 'center',
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.1, shadowRadius: 30, elevation: 10,
+    borderWidth: 1, borderColor: 'rgba(238,240,248,0.9)',
   },
-
-  confirmCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 28,
-    width: '88%',
-    alignItems: 'center',
+  modalIconWrap: {
+    width: 52, height: 52, borderRadius: 16,
+    backgroundColor: COLORS.primary + '10',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
-
-  confirmTitleCentered: {
-    fontSize: FONT_SIZES.lg + 2,
-    fontWeight: '800',
-    marginBottom: SPACING.lg,
-    textAlign: 'center',
+  modalTitle: { fontSize: 19, fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
+  modalSub: { fontSize: 12, color: COLORS.gray, marginBottom: 18 },
+  modalDivider: { width: '100%', height: 1, backgroundColor: '#f0f1f6', marginVertical: 12 },
+  modalDetailsCard: {
+    width: '100%', backgroundColor: '#fafbfe', borderRadius: 16,
+    paddingVertical: 6, paddingHorizontal: 16,
+    borderWidth: 1, borderColor: '#f0f1f6', marginBottom: 4,
   },
+  modalRowDivider: { height: 1, backgroundColor: '#f0f1f6' },
+  modalBtnGradient: { borderRadius: 14, width: '100%', marginTop: 18 },
+  modalBtn: { paddingVertical: 14, alignItems: 'center' },
+  modalBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
+  modalBackWrap: { marginTop: 14, paddingVertical: 4 },
+  modalBack: { color: COLORS.gray, fontWeight: '600', fontSize: 13 },
 
-  confirmRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.sm,
+  /* Success */
+  successIconWrap: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: COLORS.success,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+    shadowColor: COLORS.success, shadowOpacity: 0.25, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 }, elevation: 6,
   },
-
-  confirmLabel: {
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-
-  confirmValue: {
-    fontWeight: '700',
-  },
-
-  confirmBtn: {
-    marginTop: SPACING.lg,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 18,
-    borderRadius: 18,
-    width: '100%',
-    alignItems: 'center',
-  },
-
-  confirmBtnText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.md + 1,
-    fontWeight: '800',
-  },
-
-  backText: {
-    marginTop: SPACING.md,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-
-  successTitle: {
-    fontSize: FONT_SIZES.lg + 2,
-    fontWeight: '800',
-    marginVertical: SPACING.lg,
-  },
-
+  successTitle: { fontSize: 19, fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
+  successSub: { fontSize: 12, color: COLORS.gray, marginBottom: 18 },
   successPrimaryBtn: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 18,
-    borderRadius: 18,
-    width: '100%',
-    alignItems: 'center',
-    marginTop: SPACING.lg,
+    marginTop: 18, backgroundColor: COLORS.primary,
+    paddingVertical: 14, borderRadius: 14, width: '100%', alignItems: 'center',
   },
+  successPrimaryText: { color: COLORS.white, fontSize: 14, fontWeight: '700' },
 
-  successPrimaryText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.md + 1,
-    fontWeight: '800',
+  /* Detail row */
+  detailRow: {
+    width: '100%', flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingVertical: 11,
   },
-
-  successSecondaryText: {
-    marginTop: SPACING.md,
-    color: COLORS.primary,
-    fontWeight: '600',
+  detailLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailIconWrap: {
+    width: 26, height: 26, borderRadius: 8,
+    backgroundColor: COLORS.accent1 + '12',
+    alignItems: 'center', justifyContent: 'center',
   },
-
-  slotGroupTitle: {
-  fontSize: FONT_SIZES.sm + 2,
-  fontWeight: '800',
-  marginBottom: SPACING.sm,
-  color: COLORS.textPrimary,
-},
-
-slotRow: {
-  gap: 12,
-  paddingVertical: 4,
-},
-
-slot: {
-  paddingVertical: 14,
-  paddingHorizontal: 20,
-  borderRadius: 22,
-  borderWidth: 1,
-  borderColor: COLORS.border,
-  backgroundColor: '#FFFFFF',
-  shadowColor: '#000',
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 3,
-},
-
-slotActive: {
-  backgroundColor: COLORS.primary,
-  borderColor: COLORS.primary,
-  shadowOpacity: 0.2,
-  elevation: 6,
-},
-
-slotText: {
-  fontSize: FONT_SIZES.sm + 1,
-  fontWeight: '700',
-  color: COLORS.textPrimary,
-},
-
-slotTextActive: {
-  color: COLORS.white,
-},
-slotGroupHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-  marginBottom: SPACING.sm,
-},
-
-slotGroupTitle: {
-  fontSize: FONT_SIZES.sm + 2,
-  fontWeight: '800',
-  color: COLORS.textPrimary,
-  letterSpacing: 0.3,
-},
-
+  detailLabel: { fontSize: 12, color: COLORS.gray, fontWeight: '500' },
+  detailValue: { fontSize: 13, fontWeight: '600', color: COLORS.primary, maxWidth: '55%', textAlign: 'right' },
 });

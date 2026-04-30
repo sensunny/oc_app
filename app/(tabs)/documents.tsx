@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Alert,
   FlatList,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { Document } from '../../types';
-import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
 import { Linking } from 'react-native';
 
@@ -156,8 +157,11 @@ export default function DocumentsScreen() {
       />
 
       <View style={styles.header}>
-        <File size={32} color={COLORS.white} />
-        <Text style={styles.headerTitle}>Medical Documents</Text>
+        <Image source={{ uri: LOGO_URL }} style={styles.logoImg} resizeMode="contain" />
+        <View style={styles.titleRow}>
+          <File size={20} color={COLORS.white} strokeWidth={2.5} />
+          <Text style={styles.headerTitle}>Medical Documents</Text>
+        </View>
         <Text style={styles.headerSubtitle}>
           {allDocuments.length} document{allDocuments.length !== 1 ? 's' : ''}
         </Text>
@@ -198,44 +202,61 @@ export default function DocumentsScreen() {
 ========================= */
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.lightGray },
+  container: { flex: 1, backgroundColor: '#f4f5f9' },
 
   headerBackground: {
     position: 'absolute',
-    height: 200,
+    height: 210,
     left: 0,
     right: 0,
   },
 
   header: {
-    paddingTop: 60,
-    paddingBottom: SPACING.xl,
-    paddingHorizontal: SPACING.lg,
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+  },
+
+  logoImg: {
+    width: 105,
+    height: 32,
+    marginBottom: 14,
+  },
+
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 
   headerTitle: {
-    fontSize: FONT_SIZES.xl + 1,
-    fontWeight: '600',
+    fontSize: 21,
+    fontWeight: '700',
     color: COLORS.white,
+    letterSpacing: -0.2,
   },
 
   headerSubtitle: {
-    fontSize: FONT_SIZES.sm,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.55)',
+    marginTop: 3,
   },
 
   documentsContainer: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.xl + 20,
+    padding: 20,
+    paddingTop: 24,
   },
 
   /* Skeleton */
 
   skeletonCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
   },
 
   skeletonRow: {
@@ -245,32 +266,32 @@ const styles = StyleSheet.create({
   },
 
   skeletonIcon: {
-    width: 42,
-    height: 42,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: COLORS.lightGray,
-    marginRight: SPACING.md,
+    backgroundColor: '#f0f1f6',
+    marginRight: 14,
   },
 
   skeletonTitle: {
-    height: 16,
+    height: 14,
     width: '65%',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#f0f1f6',
     borderRadius: 6,
   },
 
   skeletonLineSmall: {
-    height: 12,
+    height: 10,
     width: '40%',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#f0f1f6',
     borderRadius: 6,
     marginBottom: 10,
   },
 
   skeletonFooter: {
-    height: 14,
+    height: 12,
     width: '30%',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#f0f1f6',
     borderRadius: 6,
   },
 
@@ -279,14 +300,16 @@ const styles = StyleSheet.create({
   brandCard: {
     position: 'relative',
     backgroundColor: COLORS.white,
-    borderRadius: 18,
-    marginBottom: SPACING.md,
+    borderRadius: 20,
+    marginBottom: 14,
     overflow: 'hidden',
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
   },
 
   brandAccentStrip: {
@@ -294,41 +317,42 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 4,
+    width: 3,
     backgroundColor: COLORS.accent1,
+    opacity: 0.7,
   },
 
   cardInner: {
-    padding: SPACING.md,
-    paddingLeft: SPACING.md + 6,
+    padding: 16,
+    paddingLeft: 18,
   },
 
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 12,
   },
 
   brandIconWrapper: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: COLORS.lightBlue,
+    backgroundColor: COLORS.primary + '10',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.md,
+    marginRight: 14,
   },
 
   brandTitle: {
-    fontSize: FONT_SIZES.sm + 1,
+    fontSize: 14,
     fontWeight: '700',
     color: COLORS.primary,
   },
 
   brandSubText: {
     marginTop: 2,
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    color: COLORS.gray,
   },
 
   cardFooter: {
@@ -336,46 +360,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: SPACING.sm,
+    borderTopColor: '#f0f1f6',
+    paddingTop: 10,
   },
 
   uploaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
 
   uploaderText: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    color: COLORS.gray,
   },
 
   brandDownloadPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
     backgroundColor: COLORS.primary,
   },
 
   brandFileSize: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: 11,
     fontWeight: '600',
     color: COLORS.white,
   },
 
   emptyState: {
     alignItems: 'center',
-    paddingVertical: SPACING.xxl * 2,
+    paddingVertical: 80,
   },
 
   emptyStateText: {
-    marginTop: SPACING.md,
-    fontSize: FONT_SIZES.md,
+    marginTop: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: COLORS.secondary,
+    color: COLORS.gray,
   },
 });

@@ -23,31 +23,32 @@ export const Input: React.FC<InputProps> = ({ label, error, style, ...props }) =
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: SPACING.md,
+    marginBottom: 14,
   },
   label: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: FONT_SIZES.xs,
     fontWeight: '600',
     color: COLORS.secondary,
-    marginBottom: SPACING.xs,
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
   input: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1.5,
+    backgroundColor: '#f8f9fc',
+    borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    fontSize: FONT_SIZES.md,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.secondary,
-    minHeight: 56,
+    minHeight: 44,
   },
   inputError: {
     borderColor: COLORS.error,
   },
   errorText: {
     color: COLORS.error,
-    fontSize: FONT_SIZES.xs,
-    marginTop: SPACING.xs,
+    fontSize: 11,
+    marginTop: 3,
   },
 });

@@ -8,7 +8,9 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  Platform
+  Platform,
+  Image,
+  Animated as RNAnimated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -23,7 +25,7 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { appointmentApi } from '../../services/api';
-import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { Sun, Sunrise, Sunset } from 'lucide-react-native';
 import { APP_VERSION, BASE_URL, DEVICE_DATA, fetchWrapper } from "@/utils/fetchWrapper";
 
@@ -241,6 +243,32 @@ const pastAppointments = useMemo(
     }
   };
 
+  /* ================= SKELETON ================= */
+
+  const SkeletonCard = () => {
+    const pulseAnim = React.useRef(new RNAnimated.Value(0.4)).current;
+    React.useEffect(() => {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+          RNAnimated.timing(pulseAnim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+        ])
+      ).start();
+    }, []);
+    const Bone = ({ w, h, r = 6, style }: { w: number | string; h: number; r?: number; style?: any }) => (
+      <RNAnimated.View style={[{ width: w, height: h, borderRadius: r, backgroundColor: '#eef0f6', opacity: pulseAnim }, style]} />
+    );
+    return (
+      <View style={styles.card}>
+        <Bone w={80} h={10} r={10} style={{ position: 'absolute', top: 14, right: 14 }} />
+        <Bone w={'60%'} h={14} style={{ marginBottom: 12 }} />
+        <Bone w={'80%'} h={10} style={{ marginBottom: 8 }} />
+        <Bone w={'70%'} h={10} style={{ marginBottom: 8 }} />
+        <Bone w={'75%'} h={10} />
+      </View>
+    );
+  };
+
   /* ================= CARD ================= */
 
   const AppointmentCard = ({ appointment }: { appointment: Appointment }) => (
@@ -296,16 +324,16 @@ const pastAppointments = useMemo(
               fetchSlots(appointment, apptDate);
             }}
           >
-            <Clock size={14} color="#fff" />
-            <Text style={styles.glassText}>Reschedule</Text>
+            <Clock size={13} color={COLORS.primary} />
+            <Text style={[styles.glassText, styles.glassTextPrimary]}>Reschedule</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.glassBtnRed}
             onPress={() => setCancelAppt(appointment)}
           >
-            <XCircle size={14} color="#fff" />
-            <Text style={styles.glassText}>Cancel</Text>
+            <XCircle size={13} color={COLORS.error} />
+            <Text style={[styles.glassText, styles.glassTextRed]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -317,13 +345,16 @@ const pastAppointments = useMemo(
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#20206b', '#262f82', '#9966ff']}
+        colors={[COLORS.primary, COLORS.secondary, COLORS.accent1]}
         style={styles.headerBg}
       />
 
       <View style={styles.pageHeader}>
-        <Calendar size={28} color={COLORS.white} />
-        <Text style={styles.pageTitle}>Appointments</Text>
+        <Image source={{ uri: LOGO_URL }} style={styles.logoImg} resizeMode="contain" />
+        <View style={styles.titleRow}>
+          <Calendar size={20} color={COLORS.white} strokeWidth={2.5} />
+          <Text style={styles.pageTitle}>Appointments</Text>
+        </View>
       </View>
 
       <View style={styles.tabs}>
@@ -363,7 +394,11 @@ const pastAppointments = useMemo(
       >
         <View style={styles.list}>
           {loading ? (
-            <ActivityIndicator />
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
           ) : filteredAppointments.length === 0 ? (
             <Text style={styles.emptyText}>
               No {activeTab} appointments
@@ -560,44 +595,43 @@ const pastAppointments = useMemo(
     <View style={styles.modalCard}>
       {cancelSuccess ? (
         <>
-          <CheckCircle size={72} color="#16A34A" />
-          <Text style={styles.successText}>
-            Appointment Cancelled
-          </Text>
+          <View style={styles.cancelSuccessIcon}>
+            <CheckCircle size={28} color={COLORS.white} />
+          </View>
+          <Text style={styles.cancelSuccessTitle}>Appointment Cancelled</Text>
+          <Text style={styles.cancelSuccessSub}>Your appointment has been cancelled successfully</Text>
         </>
       ) : (
         <>
+          <View style={styles.cancelIconWrap}>
+            <XCircle size={24} color={COLORS.error} />
+          </View>
           <Text style={styles.modalTitle}>Cancel Appointment?</Text>
-
           <Text style={styles.modalSub}>
-            {cancelAppt.visitTypeName} •{' '}
-            {formatDateTime(cancelAppt.dateTime)}
+            {cancelAppt.visitTypeName} • {formatDateTime(cancelAppt.dateTime)}
           </Text>
 
-          <View style={styles.cancelActions}>
+          <View style={styles.cancelBtnRow}>
             <TouchableOpacity
-              style={styles.secondaryBtn}
+              style={styles.cancelBtnNo}
               disabled={cancelSubmitting}
               onPress={() => setCancelAppt(null)}
             >
-              <Text style={styles.secondaryText}>No</Text>
+              <Text style={styles.cancelBtnNoText}>No, Keep It</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.dangerBtn}
+              style={styles.cancelBtnYes}
               disabled={cancelSubmitting}
               onPress={async () => {
                 try {
                   setCancelSubmitting(true);
-
                   await retry(() =>
                     post('cancel-appointment', {
                       appointmentId: cancelAppt.appointmentId,
                     })
                   );
-
                   setCancelSuccess(true);
-
                   setTimeout(() => {
                     setCancelAppt(null);
                     setCancelSuccess(false);
@@ -611,9 +645,9 @@ const pastAppointments = useMemo(
               }}
             >
               {cancelSubmitting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={styles.dangerText}>Yes, Cancel</Text>
+                <Text style={styles.cancelBtnYesText}>Yes, Cancel</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -642,188 +676,290 @@ const pastAppointments = useMemo(
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F6FA' },
-  headerBg: { position: 'absolute', height: 180, left: 0, right: 0 },
+  container: { flex: 1, backgroundColor: '#f4f5f9' },
+  headerBg: { position: 'absolute', height: 200, left: 0, right: 0 },
 
   pageHeader: {
-    paddingTop: 55,
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
+    paddingTop: 48,
+    paddingHorizontal: 22,
+    paddingBottom: 14,
+    alignItems: 'center',
+  },
+  logoImg: {
+    width: 105,
+    height: 32,
+    marginBottom: 14,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   pageTitle: {
-    fontSize: FONT_SIZES.xl + 1,
+    fontSize: 21,
     fontWeight: '700',
     color: COLORS.white,
+    letterSpacing: -0.2,
   },
 
   tabs: {
     flexDirection: 'row',
-    margin: SPACING.lg,
+    marginHorizontal: 20,
+    marginBottom: 16,
     backgroundColor: COLORS.white,
     borderRadius: 12,
-    padding: 4,
+    padding: 3,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
     borderRadius: 10,
   },
   activeTab: { backgroundColor: COLORS.primary },
   tabText: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: 12,
     fontWeight: '600',
-    color: COLORS.secondary,
+    color: COLORS.gray,
   },
   activeTabText: { color: COLORS.white },
 
-  list: { paddingHorizontal: SPACING.lg },
+  list: { paddingHorizontal: 20 },
   emptyText: {
     textAlign: 'center',
     marginTop: SPACING.xl,
-    color: COLORS.textSecondary,
+    color: COLORS.gray,
+    fontSize: 13,
   },
 
   card: {
     backgroundColor: COLORS.white,
-    borderRadius: 18,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
   },
   cardTitle: {
-    fontSize: FONT_SIZES.md + 1,
-    fontWeight: '800',
-    marginBottom: SPACING.sm,
-    color: COLORS.secondary,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 10,
+    color: COLORS.primary,
   },
 
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  label: { marginLeft: 6, marginRight: 4, fontWeight: '600', color: COLORS.textSecondary },
-  value: { fontWeight: '600', color: COLORS.secondary },
+  label: { marginLeft: 6, marginRight: 4, fontWeight: '600', color: COLORS.gray, fontSize: 12 },
+  value: { fontWeight: '600', color: COLORS.primary, fontSize: 12 },
 
   statusBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 14,
+    right: 14,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 999,
   },
-  statusText: { fontSize: FONT_SIZES.xs, fontWeight: '800', color: '#fff' },
-  statusConfirmed: { backgroundColor: '#16A34A' },
+  statusText: { fontSize: 10, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
+  statusConfirmed: { backgroundColor: COLORS.success },
   statusPending: { backgroundColor: '#F59E0B' },
-  statusCompleted: { backgroundColor: '#6B7280' },
-  statusCancelled: { backgroundColor: '#DC2626' },
+  statusCompleted: { backgroundColor: COLORS.gray },
+  statusCancelled: { backgroundColor: COLORS.error },
 
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.md },
+  actionRow: { flexDirection: 'row', marginTop: 14, gap: 10 },
   glassBtn: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
-  paddingVertical: 10,
-  paddingHorizontal: 16,
-  borderRadius: 999,
-  backgroundColor: COLORS.primary,
-},
-glassBtnRed: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
-  paddingVertical: 10,
-  paddingHorizontal: 16,
-  borderRadius: 999,
-  backgroundColor: '#E11D48',
-},
-  glassText: { color: '#fff', fontWeight: '700' },
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary + '12',
+    borderWidth: 1,
+    borderColor: COLORS.primary + '20',
+  },
+  glassBtnRed: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: COLORS.error + '10',
+    borderWidth: 1,
+    borderColor: COLORS.error + '20',
+  },
+  glassText: { fontWeight: '600', fontSize: 12 },
+  glassTextPrimary: { color: COLORS.primary },
+  glassTextRed: { color: COLORS.error },
 
-  overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalCard: { backgroundColor: COLORS.white, borderRadius: 24, padding: 24, width: '88%', alignItems: 'center' },
+  overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 24,
+    width: '88%',
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+  },
 
-  modalTitle: { fontSize: FONT_SIZES.lg + 1, fontWeight: '800', marginBottom: 6 },
-  modalSub: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginBottom: SPACING.md, textAlign: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6, color: COLORS.primary },
+  modalSub: { fontSize: 13, color: COLORS.gray, marginBottom: SPACING.md, textAlign: 'center' },
 
-  dateCard: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md, width: '100%' },
+  dateCard: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+    marginBottom: SPACING.md,
+    width: '100%',
+    backgroundColor: '#f4f5f9',
+  },
 
   slot: {
-  paddingVertical: 14,
-  paddingHorizontal: 20,
-  borderRadius: 22,
-  borderWidth: 1,
-  borderColor: COLORS.border,
-  backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+    backgroundColor: COLORS.white,
+    width: undefined,
+    marginBottom: 0,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
 
-  // IMPORTANT: remove grid behavior
-  width: undefined,
-  marginBottom: 0,
+  slotActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowOpacity: 0.15,
+    elevation: 5,
+  },
 
-  // Premium elevation (Android)
-  elevation: 3,
+  slotText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
 
-  // Premium shadow (iOS)
-  shadowColor: '#000',
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 4 },
-},
+  slotTextActive: {
+    color: COLORS.white,
+  },
 
-slotActive: {
-  backgroundColor: COLORS.primary,
-  borderColor: COLORS.primary,
-  shadowOpacity: 0.2,
-  elevation: 6,
-},
+  errorText: { color: COLORS.error, marginTop: 6, fontWeight: '600', fontSize: 12 },
+  reviewText: { fontSize: 13, marginVertical: 4 },
 
-slotText: {
-  fontSize: FONT_SIZES.sm + 1,
-  fontWeight: '700',
-  color: COLORS.secondary,
-},
+  primaryBtn: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 13,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  primaryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-slotTextActive: {
-  color: '#FFFFFF',
-},
+  secondaryBtn: {
+    marginTop: SPACING.sm,
+    paddingVertical: 13,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+  },
+  secondaryText: { fontWeight: '600', color: COLORS.primary, fontSize: 14 },
 
+  dangerBtn: {
+    marginTop: SPACING.sm,
+    paddingVertical: 13,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    backgroundColor: COLORS.error,
+  },
+  dangerText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  errorText: { color: '#DC2626', marginTop: 6, fontWeight: '600' },
-  reviewText: { fontSize: FONT_SIZES.sm, marginVertical: 4 },
+  successText: { marginTop: SPACING.md, fontSize: 15, fontWeight: '700', color: COLORS.success },
 
-  primaryBtn: { marginTop: SPACING.md, backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center' },
-  primaryText: { color: '#fff', fontWeight: '800', fontSize: FONT_SIZES.md },
+  /* Cancel modal */
+  cancelIconWrap: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: COLORS.error + '10',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+  },
+  cancelBtnRow: {
+    flexDirection: 'row', width: '100%', gap: 10, marginTop: 18,
+  },
+  cancelBtnNo: {
+    flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center',
+    backgroundColor: '#f4f5f9', borderWidth: 1, borderColor: '#f0f1f6',
+  },
+  cancelBtnNoText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  cancelBtnYes: {
+    flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center',
+    backgroundColor: COLORS.error,
+    shadowColor: COLORS.error, shadowOpacity: 0.2, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 }, elevation: 4,
+  },
+  cancelBtnYesText: { fontSize: 13, fontWeight: '700', color: COLORS.white },
+  cancelSuccessIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: COLORS.success, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: COLORS.success, shadowOpacity: 0.25, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 }, elevation: 6,
+  },
+  cancelSuccessTitle: { fontSize: 17, fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
+  cancelSuccessSub: { fontSize: 12, color: COLORS.gray, textAlign: 'center' },
 
-  secondaryBtn: { marginTop: SPACING.sm, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
-  secondaryText: { fontWeight: '700', color: COLORS.secondary },
-
-  dangerBtn: { marginTop: SPACING.sm, paddingVertical: 14, borderRadius: 999, width: '100%', alignItems: 'center', backgroundColor: '#DC2626' },
-  dangerText: { color: '#fff', fontWeight: '800' },
-
-  successText: { marginTop: SPACING.md, fontSize: FONT_SIZES.md, fontWeight: '800', color: '#16A34A' },
   cancelActions: {
     width: '100%',
-  marginTop: SPACING.lg,
+    marginTop: SPACING.lg,
   },
   slotGroupHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 6,
-  marginBottom: SPACING.sm,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.sm,
+  },
 
-slotGroupTitle: {
-  fontSize: FONT_SIZES.sm + 1,
-  fontWeight: '800',
-  color: COLORS.secondary,
-},
+  slotGroupTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
 
   slotRow: {
-    gap: 12,
+    gap: 10,
     paddingVertical: 4,
   },
 
   comparisonContainer: {
     width: '100%',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f4f5f9',
     borderRadius: 16,
     padding: SPACING.md,
     marginVertical: SPACING.md,
@@ -832,27 +968,27 @@ slotGroupTitle: {
     marginBottom: SPACING.sm,
   },
   comparisonLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    color: COLORS.gray,
     fontWeight: '600',
     marginBottom: 4,
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   comparisonValueOld: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    fontWeight: '700',
+    fontSize: 14,
+    color: COLORS.gray,
+    fontWeight: '600',
     textDecorationLine: 'line-through',
   },
   comparisonValueNew: {
-    fontSize: FONT_SIZES.md + 1,
-    color: '#16A34A',
-    fontWeight: '800',
+    fontSize: 15,
+    color: COLORS.success,
+    fontWeight: '700',
   },
   comparisonDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#f0f1f6',
     marginVertical: 12,
   },
-
 });

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -20,7 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { COLORS, SPACING, FONT_SIZES } from '../../constants/theme';
+import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../../constants/theme';
 import { patientApi } from '@/services/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from "expo-constants";
@@ -153,12 +154,11 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <LinearGradient
             colors={[COLORS.primary, COLORS.secondary, COLORS.accent1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFillObject}
           />
+        <Image source={{ uri: LOGO_URL }} style={styles.logoImg} resizeMode="contain" />
         <View style={styles.avatarContainer}>
-          <User size={40} color={COLORS.white} />
+          <User size={22} color={COLORS.white} />
         </View>
         <Text style={styles.patientName}>{patient?.patient_name}</Text>
         <Text style={styles.patientId}>Hospital ID: {patient?.patient_id}</Text>
@@ -167,6 +167,7 @@ export default function ProfileScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={false}
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account Information</Text>
@@ -187,7 +188,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section, { display: "none"}}>
+        <View style={[styles.section, { display: "none"}]}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.card}>
             <MenuItem
@@ -248,113 +249,124 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#f4f5f9',
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: 60,
-    paddingBottom: SPACING.xl,
+    paddingTop: 48,
+    paddingBottom: 18,
     alignItems: 'center',
+  },
+  logoImg: {
+    width: 105,
+    height: 32,
+    marginBottom: 12,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 8,
   },
   patientName: {
-    fontSize: FONT_SIZES.xl,
+    fontSize: 18,
     fontWeight: '700',
     color: COLORS.white,
+    letterSpacing: -0.2,
   },
   patientId: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: 11,
     color: COLORS.white,
-    opacity: 0.8,
-    fontWeight: '700',
-    marginTop: SPACING.xs,
+    opacity: 0.55,
+    fontWeight: '600',
+    marginTop: 3,
+    letterSpacing: 0.2,
   },
   scrollView: {
     flex: 1,
   },
   section: {
-    padding: SPACING.lg,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   sectionTitle: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: 11,
     fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
+    color: COLORS.gray,
+    marginBottom: 10,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   card: {
     backgroundColor: COLORS.white,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#f0f1f6',
   },
   menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: COLORS.lightGray,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary + '10',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.md,
+    marginRight: 14,
   },
   menuContent: {
     flex: 1,
   },
   menuTitle: {
-    fontSize: FONT_SIZES.md,
+    fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: COLORS.primary,
   },
   menuSubtitle: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    color: COLORS.gray,
     marginTop: 2,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
-    borderRadius: 16,
-    gap: SPACING.sm,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.error + '30',
   },
   logoutText: {
-    fontSize: FONT_SIZES.md,
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.error,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
+    paddingVertical: 24,
   },
   footerText: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    color: COLORS.gray,
   },
 });

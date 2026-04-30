@@ -11,9 +11,8 @@ import {
   LayoutAnimation,
   UIManager,
   Pressable,
-  Modal,
   Animated,
-  Keyboard
+  Keyboard,
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
@@ -21,39 +20,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { COLORS, SPACING, FONT_SIZES, LOGO_URL } from '../constants/theme';
-import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS, LOGO_URL } from '../constants/theme';
 import { PremiumAlert } from '../components/PremiumAlert';
+import { PulseGraphic, MedicalCrossGraphic, FloatingDots, ShieldGraphic } from '../components/LoginGraphics';
 
-const { width } = Dimensions.get('window');
+const { height: SCREEN_H } = Dimensions.get('window');
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
-
-const showToast = (
-  message: string,
-  type: 'success' | 'error' = 'error'
-) => {
-  Toast.show({
-    type,
-    text1: message,
-    position: 'top',
-    visibilityTime: 3500,
-    topOffset: 100,
-  });
-};
-
-/* ===== ORIGINAL BRAND – REFINED ===== */
-const BRAND = {
-  color1: '#20206b',
-  color2: '#262f82',
-  color3: '#9966ff',
-  surface: '#ffffff',
-  textPrimary: '#1f2937',
-  textMuted: '#6b7280',
-};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -69,129 +44,90 @@ export default function LoginScreen() {
   const [hospitalUids, setHospitalUids] = useState<any[]>([]);
   const [selectedHospitalUid, setSelectedHospitalUid] = useState('');
   const [isUidOpen, setIsUidOpen] = useState(false);
-  const [alert, setAlert] = useState({
-    visible: false,
-    title: '',
-    message: '',
-  });
-
-  const dropdownAnim = useRef(new Animated.Value(0)).current;
-
-
-
-  /* Smooth & glitch-free */
-  useEffect(() => {
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(
-        220,
-        LayoutAnimation.Types.easeInEaseOut,
-        LayoutAnimation.Properties.opacity
-      )
-    );
-  }, [step]);
-
+  const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
   const [callbackName, setCallbackName] = useState('');
   const [isCallback, setIsCallback] = useState(false);
 
-  const handleSendOtp = async (patientName?: string) => {
-  Keyboard.dismiss();
-  setErrors({ identifier: '', otp: '', hospitalUid: '' });
+  const dropdownAnim = useRef(new Animated.Value(0)).current;
 
-  if (!identifier.trim()) {
-    const errorMsg = loginMethod === 'mobile' ? 'Please enter Mobile Number' : 'Please enter Hospital UID';
-    setErrors({ identifier: errorMsg, otp: '', hospitalUid: '' });
-    return;
-  }
+  useEffect(() => {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity)
+    );
+  }, [step]);
 
-  setLoading(true);
-  const response: any = await sendOTP(identifier, callbackName);
-  setLoading(false);
+  /* ── Handlers ── */
 
-  if (response?.code === 1 || response?.data?.code === 1) {
-    setIsCallback(false);
-    setStep('otp');
-    setUserMobile(response.data.mobile);
-    setHospitalUids(response.data.hospitalUids || []);
+  const handleSendOtp = async () => {
+    Keyboard.dismiss();
+    setErrors({ identifier: '', otp: '', hospitalUid: '' });
 
-    if (response.data.hospitalUids?.length === 1) {
-      setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
+    if (!identifier.trim()) {
+      const msg = loginMethod === 'mobile' ? 'Please enter Mobile Number' : 'Please enter Hospital UID';
+      setErrors({ identifier: msg, otp: '', hospitalUid: '' });
+      return;
     }
-  }
 
-  if (response?.code === 3) {
-    setIsCallback(true);
-    setAlert({
-      visible: true,
-      title: 'Info',
-      message: response?.message || 'Please request a callback',
-    });
-    return;
-  }
+    setLoading(true);
+    const response: any = await sendOTP(identifier, callbackName);
+    setLoading(false);
 
-  if (response?.code === 4) {
-  setIsCallback(false);
-  setCallbackName('');
-  setIdentifier('');
+    if (response?.code === 1 || response?.data?.code === 1) {
+      setIsCallback(false);
+      setStep('otp');
+      setUserMobile(response.data.mobile);
+      setHospitalUids(response.data.hospitalUids || []);
+      if (response.data.hospitalUids?.length === 1) {
+        setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
+      }
+    }
 
-  setAlert({
-    visible: true,
-    title: 'Success',
-    message: response?.message || 'Our team will contact you shortly',
-  });
+    if (response?.code === 3) {
+      setIsCallback(true);
+      setAlert({ visible: true, title: 'Info', message: response?.message || 'Please request a callback' });
+      return;
+    }
 
-  return;
-}
+    if (response?.code === 4) {
+      setIsCallback(false);
+      setCallbackName('');
+      setIdentifier('');
+      setAlert({ visible: true, title: 'Success', message: response?.message || 'Our team will contact you shortly' });
+      return;
+    }
 
-  if (!response || response?.code !== 1) {
-    setAlert({
-      visible: true,
-      title: 'Error',
-      message: response?.message || 'Something went wrong',
-    });
-  }
-};
-
-
+    if (!response || response?.code !== 1) {
+      setAlert({ visible: true, title: 'Error', message: response?.message || 'Something went wrong' });
+    }
+  };
 
   const handleVerifyOtp = async () => {
     Keyboard.dismiss();
-  setErrors({ identifier: '', otp: '', hospitalUid: '' });
+    setErrors({ identifier: '', otp: '', hospitalUid: '' });
 
-  if (!otp.trim()) {
-    setErrors({ identifier: '', otp: 'Please enter OTP', hospitalUid: '' });
-    return;
-  }
+    if (!otp.trim()) {
+      setErrors({ identifier: '', otp: 'Please enter OTP', hospitalUid: '' });
+      return;
+    }
+    if (otp.length !== 4) {
+      setErrors({ identifier: '', otp: 'OTP must be 4 digits', hospitalUid: '' });
+      return;
+    }
+    if (hospitalUids.length > 1 && !selectedHospitalUid) {
+      setErrors({ identifier: '', otp: '', hospitalUid: 'Please select Hospital ID' });
+      return;
+    }
 
-  if (otp.length !== 4) {
-    setErrors({ identifier: '', otp: 'OTP must be 4 digits', hospitalUid: '' });
-    return;
-  }
+    setLoading(true);
+    const success = await login(userMobile, otp, selectedHospitalUid);
+    setLoading(false);
 
-  // 🔑 MULTI UID VALIDATION
-  if (hospitalUids.length > 1 && !selectedHospitalUid) {
-    setErrors({
-    identifier: '',
-    otp: '',
-    hospitalUid: 'Please select Hospital ID',
-  });
-  return;
-  }
-
-  setLoading(true);
-  const success = await login(userMobile, otp, selectedHospitalUid);
-  setLoading(false);
-
-  if (success) {
-    router.replace('/(tabs)');
-  } else {
-    setAlert({
-      visible: true,
-      title: 'Error',
-      message: 'Invalid OTP or credentials',
-    });
-  }
-};
-
+    if (success) {
+      router.replace('/(tabs)');
+    } else {
+      setAlert({ visible: true, title: 'Error', message: 'Invalid OTP or credentials' });
+    }
+  };
 
   const handleBack = () => {
     setOtp('');
@@ -200,43 +136,43 @@ export default function LoginScreen() {
   };
 
   const toggleUidDropdown = () => {
-  const toValue = isUidOpen ? 0 : 1;
-  setIsUidOpen(!isUidOpen);
+    const toValue = isUidOpen ? 0 : 1;
+    setIsUidOpen(!isUidOpen);
+    Animated.timing(dropdownAnim, { toValue, duration: 220, useNativeDriver: false }).start();
+  };
 
-  Animated.timing(dropdownAnim, {
-    toValue,
-    duration: 220,
-    useNativeDriver: false,
-  }).start();
-};
-
+  /* ── Render ── */
 
   return (
-    <View style={styles.container}>
-    <PremiumAlert
-  visible={alert.visible}
-  title={alert.title}
-  message={alert.message}
-  onClose={() =>
-    setAlert({
-      visible: false,
-      title: '',
-      message: '',
-    })
-  }
-/>
-      {/* Clean medical gradient */}
+    <View style={styles.root}>
+      <PremiumAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => setAlert({ visible: false, title: '', message: '' })}
+      />
+
+      {/* Background gradient — matched to home screen */}
       <LinearGradient
-        colors={[BRAND.color1, BRAND.color2]}
+        colors={[COLORS.primary, COLORS.secondary]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        end={{ x: 0.8, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Soft accent blobs (not glass) */}
-      <View style={styles.decor}>
+      {/* Decorative layer: blobs + SVG graphics */}
+      <View style={styles.decor} pointerEvents="none">
         <View style={styles.blob1} />
         <View style={styles.blob2} />
+        <View style={styles.blob3} />
+        {/* Heartbeat pulse — top right */}
+        <View style={styles.pulseWrap}>
+          <PulseGraphic size={140} />
+        </View>
+        {/* Medical cross — bottom left */}
+        <View style={styles.crossWrap}>
+          <MedicalCrossGraphic size={70} />
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -248,118 +184,107 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.logoContainer}>
+          {/* Logo */}
+          <View style={styles.logoWrap}>
             <Image source={{ uri: LOGO_URL }} style={styles.logo} />
           </View>
 
-          {/* Premium Card */}
-          <View style={styles.card}>
-            <Text style={styles.title}>
-  {step === 'identifier'
-    ? isCallback
-      ? 'Request a Callback'
-      : 'Welcome Back'
-    : 'Verify OTP'}
-</Text>
+          {/* Floating dots between logo and card */}
+          <View style={styles.dotsWrap}>
+            <FloatingDots width={220} height={20} />
+          </View>
 
-<Text style={styles.subtitle}>
-  {step === 'identifier'
-    ? isCallback
-      ? 'Please share your name and our team will contact you shortly'
-      : 'Access your Oncare medical records securely'
-    : `Enter the code sent to ${userMobile}`}
-</Text>
+          {/* Card */}
+          <View style={styles.card}>
+            {/* Thin accent bar at top */}
+            <View style={styles.accentBar} />
+
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>
+                {step === 'identifier'
+                  ? isCallback ? 'Request a Callback' : 'Welcome Back'
+                  : 'Verify OTP'}
+              </Text>
+              <View style={styles.shieldWrap}>
+                <ShieldGraphic size={18} />
+              </View>
+            </View>
+
+            <Text style={styles.subtitle}>
+              {step === 'identifier'
+                ? isCallback
+                  ? 'Share your name and our team will reach out'
+                  : 'Access your Oncare medical records securely'
+                : `Enter the code sent to ${userMobile}`}
+            </Text>
+
+            {/* Divider */}
+            <View style={styles.divider} />
 
             {step === 'identifier' ? (
               <>
-              {isCallback && (
-              <>
-                <Input
-                  label="Your Name"
-                  value={callbackName}
-                  onChangeText={setCallbackName}
-                  placeholder="Enter your name"
-                />
-
-                <LinearGradient colors={[BRAND.color1, BRAND.color3]} style={styles.cta}>
-                  <Button
-                    title="Get a Callback"
-                    onPress={() => handleSendOtp(callbackName)}
-                    loading={loading}
-                    transparent
-                  />
-                </LinearGradient>
-              </>
-            )}
-                
-                {!isCallback && (
+                {isCallback ? (
                   <>
-                    <View style={styles.tabContainer}>
+                    <Input
+                      label="Your Name"
+                      value={callbackName}
+                      onChangeText={setCallbackName}
+                      placeholder="Enter your name"
+                    />
+                    <LinearGradient
+                      colors={[COLORS.primary, COLORS.accent1]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.ctaGradient}
+                    >
+                      <Button
+                        title="Get a Callback"
+                        onPress={handleSendOtp}
+                        loading={loading}
+                        transparent
+                      />
+                    </LinearGradient>
+                  </>
+                ) : (
+                  <>
+                    {/* Tab switcher */}
+                    <View style={styles.tabRow}>
                       <Pressable
-                        style={[
-                          styles.tab,
-                          loginMethod === 'mobile' && styles.activeTab,
-                        ]}
-                        onPress={() => {
-                          setLoginMethod('mobile');
-                          setIdentifier('');
-                          setErrors({ ...errors, identifier: '' });
-                        }}
+                        style={[styles.tab, loginMethod === 'mobile' && styles.tabActive]}
+                        onPress={() => { setLoginMethod('mobile'); setIdentifier(''); setErrors({ ...errors, identifier: '' }); }}
                       >
-                        <Text
-                          style={[
-                            styles.tabText,
-                            loginMethod === 'mobile' && styles.activeTabText,
-                          ]}
-                        >
+                        <Text style={[styles.tabLabel, loginMethod === 'mobile' && styles.tabLabelActive]}>
                           Mobile Number
                         </Text>
                       </Pressable>
                       <Pressable
-                        style={[
-                          styles.tab,
-                          loginMethod === 'hospitalUid' && styles.activeTab,
-                        ]}
-                        onPress={() => {
-                          setLoginMethod('hospitalUid');
-                          setIdentifier('');
-                          setErrors({ ...errors, identifier: '' });
-                        }}
+                        style={[styles.tab, loginMethod === 'hospitalUid' && styles.tabActive]}
+                        onPress={() => { setLoginMethod('hospitalUid'); setIdentifier(''); setErrors({ ...errors, identifier: '' }); }}
                       >
-                        <Text
-                          style={[
-                            styles.tabText,
-                            loginMethod === 'hospitalUid' && styles.activeTabText,
-                          ]}
-                        >
+                        <Text style={[styles.tabLabel, loginMethod === 'hospitalUid' && styles.tabLabelActive]}>
                           Hospital UID
                         </Text>
                       </Pressable>
                     </View>
 
                     <Input
-                      label={
-                        loginMethod === 'mobile' ? 'Mobile Number' : 'Hospital UID'
-                      }
+                      label={loginMethod === 'mobile' ? 'Mobile Number' : 'Hospital UID'}
                       value={identifier}
                       onChangeText={setIdentifier}
-                      placeholder={
-                        loginMethod === 'mobile'
-                          ? 'Enter Mobile Number'
-                          : 'Enter Hospital UID'
-                      }
-                      keyboardType={
-                        loginMethod === 'mobile' ? 'phone-pad' : 'phone-pad'
-                      }
+                      placeholder={loginMethod === 'mobile' ? 'Enter Mobile Number' : 'Enter Hospital UID'}
+                      keyboardType="phone-pad"
                       error={errors.identifier}
                     />
+
                     <LinearGradient
-                      colors={[BRAND.color1, BRAND.color3]}
-                      style={styles.cta}
+                      colors={[COLORS.primary, COLORS.accent1]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.ctaGradient}
                     >
                       <Button
                         title="Continue"
-                        onPress={() => handleSendOtp()}
+                        onPress={handleSendOtp}
                         loading={loading}
                         transparent
                       />
@@ -369,60 +294,51 @@ export default function LoginScreen() {
               </>
             ) : (
               <>
-              {hospitalUids.length > 1 ? (
-  <>
-    {/* Hospital ID Dropdown */}
-<Pressable onPress={toggleUidDropdown}>
-  <View pointerEvents="none">
-    <Input
-      label="Hospital ID"
-      value={selectedHospitalUid || 'Select Hospital ID'}
-      editable={false}
-      error={errors.hospitalUid}
-    />
-  </View>
-</Pressable>
+                {/* Hospital UID selector */}
+                {hospitalUids.length > 1 ? (
+                  <>
+                    <Pressable onPress={toggleUidDropdown}>
+                      <View pointerEvents="none">
+                        <Input
+                          label="Hospital ID"
+                          value={selectedHospitalUid || 'Select Hospital ID'}
+                          editable={false}
+                          error={errors.hospitalUid}
+                        />
+                      </View>
+                    </Pressable>
 
-<Animated.View
-  style={[
-    styles.dropdownContainer,
-    {
-      maxHeight: dropdownAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 220],
-      }),
-      opacity: dropdownAnim,
-    },
-  ]}
->
-  <ScrollView nestedScrollEnabled>
-    {hospitalUids.map((item) => (
-      <Pressable
-        key={item.hospitalUid}
-        onPress={() => {
-          setSelectedHospitalUid(item.hospitalUid);
-          setErrors({ ...errors, hospitalUid: '' });
-          toggleUidDropdown();
-        }}
-      >
-        <View style={styles.dropdownOption}>
-          <Text style={styles.dropdownUid}>{item.hospitalUid}</Text>
-          <Text style={styles.dropdownName}>{item.name}</Text>
-        </View>
-      </Pressable>
-    ))}
-  </ScrollView>
-</Animated.View>
-
-  </>
-) : (
-  <Input
-    label="Hospital ID"
-    value={selectedHospitalUid}
-    editable={false}
-  />
-)}
-
+                    <Animated.View
+                      style={[
+                        styles.dropdown,
+                        {
+                          maxHeight: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 200] }),
+                          opacity: dropdownAnim,
+                        },
+                      ]}
+                    >
+                      <ScrollView nestedScrollEnabled>
+                        {hospitalUids.map((item) => (
+                          <Pressable
+                            key={item.hospitalUid}
+                            onPress={() => {
+                              setSelectedHospitalUid(item.hospitalUid);
+                              setErrors({ ...errors, hospitalUid: '' });
+                              toggleUidDropdown();
+                            }}
+                          >
+                            <View style={styles.dropdownItem}>
+                              <Text style={styles.dropdownUid}>{item.hospitalUid}</Text>
+                              <Text style={styles.dropdownName}>{item.name}</Text>
+                            </View>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </Animated.View>
+                  </>
+                ) : (
+                  <Input label="Hospital ID" value={selectedHospitalUid} editable={false} />
+                )}
 
                 <Input
                   label="Enter OTP"
@@ -435,8 +351,10 @@ export default function LoginScreen() {
                 />
 
                 <LinearGradient
-                  colors={[BRAND.color1, BRAND.color3]}
-                  style={styles.cta}
+                  colors={[COLORS.primary, COLORS.accent1]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.ctaGradient}
                 >
                   <Button
                     title="Verify & Login"
@@ -464,319 +382,209 @@ export default function LoginScreen() {
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  root: {
+    flex: 1,
+  },
 
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: SPACING.lg,
+    paddingHorizontal: 28,
+    paddingVertical: 40,
   },
 
+  /* Decorative blobs */
   decor: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
   },
   blob1: {
     position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#9966ff',
-    opacity: 0.15,
-    top: -120,
-    right: -100,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: COLORS.accent1,
+    opacity: 0.08,
+    top: -60,
+    right: -50,
   },
   blob2: {
     position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#ffffff',
-    opacity: 0.12,
-    bottom: -80,
-    left: -80,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: COLORS.white,
+    opacity: 0.06,
+    bottom: -40,
+    left: -50,
+  },
+  blob3: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.accent2,
+    opacity: 0.06,
+    top: SCREEN_H * 0.35,
+    left: -30,
+  },
+  pulseWrap: {
+    position: 'absolute',
+    top: 60,
+    right: 10,
+    opacity: 0.9,
+  },
+  crossWrap: {
+    position: 'absolute',
+    bottom: 80,
+    left: 15,
+    opacity: 0.9,
   },
 
-  logoContainer: {
+  /* Logo */
+  logoWrap: {
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: 12,
   },
   logo: {
-    width: 220,
-    height: 90,
+    width: 170,
+    height: 60,
     resizeMode: 'contain',
   },
+  dotsWrap: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
 
+  /* Card — premium glassy shadow style matching home screen */
   card: {
-    backgroundColor: BRAND.surface,
-    borderRadius: 28,
-    padding: SPACING.xl,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 25,
-    shadowOffset: { width: 0, height: 15 },
-    elevation: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    paddingTop: 28,
+    paddingBottom: 24,
+    paddingHorizontal: 22,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+    overflow: 'hidden',
+  },
+
+  accentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: COLORS.accent1,
+    opacity: 0.6,
+  },
+
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  shieldWrap: {
+    marginLeft: 6,
+    marginBottom: -1,
   },
 
   title: {
-    fontSize: FONT_SIZES.xxxl,
-    fontWeight: '800',
-    color: BRAND.color2,
-    marginBottom: SPACING.sm,
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.secondary,
+    letterSpacing: -0.3,
   },
 
   subtitle: {
-    fontSize: FONT_SIZES.md,
-    color: BRAND.textMuted,
-    marginBottom: SPACING.xl,
-    lineHeight: 22,
+    fontSize: 13,
+    color: COLORS.gray,
+    lineHeight: 18,
+    marginBottom: 6,
   },
 
-  cta: {
-    borderRadius: 14,
-    padding: 2,
-    marginTop: SPACING.md,
+  divider: {
+    height: 1,
+    backgroundColor: '#f0f1f6',
+    marginVertical: 16,
   },
 
-  backBtn: {
-    marginTop: SPACING.md,
-  },
-
-dropdownLabel: {
-  fontSize: FONT_SIZES.sm,
-  color: BRAND.textMuted,
-  marginBottom: 6,
-},
-
-dropdownWrapper: {
-  borderRadius: 14,
-  borderWidth: 1,
-  borderColor: '#e5e7eb',
-  paddingVertical: 16,
-  paddingHorizontal: 14,
-  backgroundColor: '#fafafa',
-  marginBottom: SPACING.md,
-},
-
-dropdownValue: {
-  fontSize: FONT_SIZES.md,
-  color: BRAND.textPrimary,
-  fontWeight: '600',
-},
-
-placeholderText: {
-  color: '#9ca3af',
-  fontWeight: '500',
-},
-
-
-selectField: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  borderWidth: 1,
-  borderColor: '#e5e7eb',
-  borderRadius: 14,
-  paddingVertical: 16,
-  paddingHorizontal: 14,
-  backgroundColor: '#fafafa',
-},
-
-selectValue: {
-  fontSize: FONT_SIZES.md,
-  fontWeight: '600',
-  color: BRAND.textPrimary,
-},
-
-caret: {
-  fontSize: 18,
-  color: BRAND.textMuted,
-},
-
-inputLabel: {
-  fontSize: FONT_SIZES.sm,
-  color: BRAND.textMuted,
-  marginBottom: 6,
-},
-
-selectContainer: {
-  borderWidth: 1,
-  borderColor: '#e5e7eb',
-  borderRadius: 14,
-  paddingVertical: 16,
-  paddingHorizontal: 14,
-  backgroundColor: '#ffffff',
-},
-
-selectText: {
-  fontSize: FONT_SIZES.md,
-  fontWeight: '500',
-  color: BRAND.textPrimary,
-},
-
-selectPlaceholder: {
-  color: '#9ca3af',
-},
-
-selectOptionSelected: {
-  backgroundColor: '#f4f6ff',
-  fontWeight: '700',
-},
-
-
-inputErrorBorder: {
-  borderColor: '#ef4444',
-},
-
-inputErrorText: {
-  marginTop: 6,
-  fontSize: FONT_SIZES.sm,
-  color: '#ef4444',
-},
-
-selectDropdown: {
-  marginTop: -20,
-  marginBottom: 15,
-  borderWidth: 1,
-  borderColor: '#e5e7eb',
-  borderRadius: 14,
-  backgroundColor: '#ffffff',
-  overflow: 'hidden',
-},
-
-selectOption: {
-  paddingVertical: 16,
-  paddingHorizontal: 14,
-  borderBottomWidth: 1,
-  borderBottomColor: '#f1f5f9',
-  fontSize: FONT_SIZES.md,
-  fontWeight: '500',
-  color: BRAND.textPrimary,
-},
-
-selectSub: {
-  fontSize: FONT_SIZES.sm,
-  color: BRAND.textMuted,
-},
-sheetBackdrop: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.35)',
-},
-
-sheetContainer: {
-  position: 'absolute',
-  bottom: 0,
-  width: '100%',
-  maxHeight: '70%',
-  backgroundColor: '#ffffff',
-  borderTopLeftRadius: 28,
-  borderTopRightRadius: 28,
-  padding: SPACING.xl,
-  shadowColor: '#000',
-  shadowOpacity: 0.25,
-  shadowRadius: 30,
-  shadowOffset: { width: 0, height: -10 },
-  elevation: 20,
-},
-
-sheetHandle: {
-  width: 44,
-  height: 5,
-  borderRadius: 3,
-  backgroundColor: '#d1d5db',
-  alignSelf: 'center',
-  marginBottom: SPACING.md,
-},
-
-sheetTitle: {
-  fontSize: FONT_SIZES.lg,
-  fontWeight: '800',
-  color: BRAND.color2,
-  textAlign: 'center',
-  marginBottom: SPACING.lg,
-},
-
-sheetOption: {
-  paddingVertical: 18,
-  borderBottomWidth: 1,
-  borderBottomColor: '#f1f5f9',
-},
-
-sheetUid: {
-  fontSize: FONT_SIZES.md,
-  fontWeight: '700',
-  color: BRAND.textPrimary,
-},
-
-sheetName: {
-  fontSize: FONT_SIZES.sm,
-  color: BRAND.textMuted,
-  marginTop: 2,
-},
-
-dropdownContainer: {
-  marginTop: -10,
-  marginBottom: SPACING.md,
-  backgroundColor: '#ffffff',
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: '#e5e7eb',
-  overflow: 'hidden',
-  shadowColor: '#000',
-  shadowOpacity: 0.12,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: 8 },
-  elevation: 12,
-},
-
-dropdownOption: {
-  paddingVertical: 16,
-  paddingHorizontal: 14,
-  borderBottomWidth: 1,
-  borderBottomColor: '#f1f5f9',
-},
-
-dropdownUid: {
-  fontSize: FONT_SIZES.md,
-  fontWeight: '700',
-  color: BRAND.textPrimary,
-},
-
-dropdownName: {
-  fontSize: FONT_SIZES.sm,
-  color: BRAND.textMuted,
-  marginTop: 2,
-},
-
-
-  tabContainer: {
+  /* Tabs */
+  tabRow: {
     flexDirection: 'row',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: SPACING.lg,
+    backgroundColor: '#f4f5f9',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 16,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 8,
   },
-  activeTab: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  tabActive: {
+    backgroundColor: COLORS.white,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  tabText: {
-    fontSize: FONT_SIZES.sm,
+  tabLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    color: BRAND.textMuted,
+    color: COLORS.gray,
   },
-  activeTabText: {
-    color: BRAND.color2,
+  tabLabelActive: {
+    color: COLORS.primary,
     fontWeight: '700',
+  },
+
+  /* CTA gradient wrapper */
+  ctaGradient: {
+    borderRadius: 12,
+    marginTop: 6,
+  },
+
+  backBtn: {
+    marginTop: 10,
+  },
+
+  /* Dropdown */
+  dropdown: {
+    marginTop: -6,
+    marginBottom: 10,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+    overflow: 'hidden',
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f1f6',
+  },
+  dropdownUid: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  dropdownName: {
+    fontSize: 11,
+    color: COLORS.gray,
+    marginTop: 1,
   },
 });
