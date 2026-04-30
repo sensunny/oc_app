@@ -157,26 +157,32 @@ const [cancelSuccess, setCancelSuccess] = useState(false);
 
   /* ================= FILTER ================= */
 
-  const now = new Date();
+  // Today at midnight — appointments today and forward are "upcoming"
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
 
   const upcomingAppointments = useMemo(
   () =>
-    appointments.filter(
-      a =>
-        new Date(a.dateTime) >= now &&
-        (a.status === 'confirmed' || a.status === 'pending')
-    ),
+    appointments
+      .filter(
+        a =>
+          new Date(a.dateTime) >= todayStart &&
+          (a.status === 'confirmed' || a.status === 'pending')
+      )
+      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()),
   [appointments]
 );
 
 const pastAppointments = useMemo(
   () =>
-    appointments.filter(
-      a =>
-        new Date(a.dateTime) < now ||
-        a.status === 'completed' ||
-        a.status === 'cancelled'
-    ),
+    appointments
+      .filter(
+        a =>
+          new Date(a.dateTime) < todayStart ||
+          a.status === 'completed' ||
+          a.status === 'cancelled'
+      )
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()),
   [appointments]
 );
 
@@ -420,167 +426,114 @@ const pastAppointments = useMemo(
           <View style={styles.modalCard}>
             {success ? (
               <>
-                <CheckCircle size={72} color="#16A34A" />
-                <Text style={styles.successText}>
-                  Appointment Rescheduled
-                </Text>
+                <View style={styles.rescheduleSuccessIcon}>
+                  <CheckCircle size={28} color={COLORS.white} />
+                </View>
+                <Text style={styles.rescheduleSuccessTitle}>Rescheduled!</Text>
+                <Text style={styles.rescheduleSuccessSub}>Your appointment has been updated</Text>
               </>
             ) : (
               <>
+                {/* Header icon */}
+                <View style={styles.rescheduleIconWrap}>
+                  <Clock size={22} color={COLORS.primary} />
+                </View>
                 <Text style={styles.modalTitle}>
-                  {reviewMode ? 'Review Changes' : 'Reschedule Appointment'}
+                  {reviewMode ? 'Confirm Changes' : 'Reschedule'}
                 </Text>
-
                 <Text style={styles.modalSub}>
-                  {rescheduleAppt.visitTypeName} •{' '}
-                  Dr. {rescheduleAppt.practitionerName}
+                  {rescheduleAppt.visitTypeName} • Dr. {rescheduleAppt.practitionerName}
                 </Text>
 
                 {!reviewMode ? (
                   <>
-                    <TouchableOpacity
-                      style={styles.dateCard}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Text style={styles.value}>
-                        {newDate.toDateString()}
-                      </Text>
+                    {/* Date picker */}
+                    <TouchableOpacity style={styles.datePickerRow} onPress={() => setShowDatePicker(true)}>
+                      <Calendar size={16} color={COLORS.primary} />
+                      <Text style={styles.datePickerText}>{newDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+                      <Text style={styles.datePickerHint}>Change</Text>
                     </TouchableOpacity>
 
                     {slotLoading && (
-                      <ActivityIndicator />
+                      <View style={styles.slotLoadingWrap}>
+                        <ActivityIndicator size="small" color={COLORS.primary} />
+                        <Text style={styles.slotLoadingText}>Loading slots...</Text>
+                      </View>
                     )}
 
                     {slots.length === 0 && !slotLoading && (
-                      <Text style={styles.emptyText}>
-                        No slots are available for the selected date. Please try another day.
-                      </Text>
+                      <Text style={styles.emptyText}>No slots available. Try another date.</Text>
                     )}
 
                     {(() => {
-  const grouped = groupSlotsByTime(slots);
-
-  const renderGroup = (title: string, data: any[]) => {
-    if (!data.length) return null;
-
-    return (
-      <View style={{ marginBottom: SPACING.lg, width: '100%' }}>
-        <View style={styles.slotGroupHeader}>
-          {title === 'Morning' && <Sunrise size={16} color={COLORS.primary} />}
-          {title === 'Afternoon' && <Sun size={16} color={COLORS.primary} />}
-          {title === 'Evening' && <Sunset size={16} color={COLORS.primary} />}
-          <Text style={styles.slotGroupTitle}>{title}</Text>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.slotRow}
-        >
-          {data.map(s => (
-            <TouchableOpacity
-              key={s.dateTime}
-              style={[
-                styles.slot,
-                selectedSlot?.dateTime === s.dateTime && styles.slotActive,
-              ]}
-              onPress={() => setSelectedSlot(s)}
-            >
-              <Text
-                style={[
-                  styles.slotText,
-                  selectedSlot?.dateTime === s.dateTime &&
-                    styles.slotTextActive,
-                ]}
-              >
-                {s.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  return (
-    <>
-      {renderGroup('Morning', grouped.morning)}
-      {renderGroup('Afternoon', grouped.afternoon)}
-      {renderGroup('Evening', grouped.evening)}
-    </>
-  );
-})()}
+                      const grouped = groupSlotsByTime(slots);
+                      const renderGroup = (title: string, data: any[], Icon: any) => {
+                        if (!data.length) return null;
+                        return (
+                          <View style={styles.slotSection} key={title}>
+                            <View style={styles.slotGroupHeader}>
+                              <Icon size={14} color={COLORS.gray} />
+                              <Text style={styles.slotGroupTitle}>{title}</Text>
+                            </View>
+                            <View style={styles.slotWrap}>
+                              {data.map(s => {
+                                const active = selectedSlot?.dateTime === s.dateTime;
+                                return (
+                                  <TouchableOpacity key={s.dateTime} style={[styles.slotChip, active && styles.slotChipActive]} onPress={() => setSelectedSlot(s)}>
+                                    <Text style={[styles.slotChipText, active && styles.slotChipTextActive]}>{s.name}</Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        );
+                      };
+                      return (
+                        <>
+                          {renderGroup('Morning', grouped.morning, Sunrise)}
+                          {renderGroup('Afternoon', grouped.afternoon, Sun)}
+                          {renderGroup('Evening', grouped.evening, Sunset)}
+                        </>
+                      );
+                    })()}
 
                     {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-                    <TouchableOpacity
-                      style={styles.primaryBtn}
-                      onPress={() => {
-                        if (!selectedSlot) {
-                          setError('Please select a time slot');
-                          return;
-                        }
-                        setError('');
-                        setReviewMode(true);
-                      }}
-                    >
-                      <Text style={styles.primaryText}>Review</Text>
+                    <TouchableOpacity style={styles.primaryBtn} onPress={() => {
+                      if (!selectedSlot) { setError('Please select a time slot'); return; }
+                      setError(''); setReviewMode(true);
+                    }}>
+                      <Text style={styles.primaryText}>Review Changes</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.secondaryBtn}
-                      onPress={() => setRescheduleAppt(null)}
-                    >
-                      <Text style={styles.secondaryText}>Cancel</Text>
+                    <TouchableOpacity style={styles.ghostBtn} onPress={() => setRescheduleAppt(null)}>
+                      <Text style={styles.ghostBtnText}>Cancel</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <>
-                    <View style={styles.comparisonContainer}>
-                      <View style={styles.comparisonItem}>
-                        <Text style={styles.comparisonLabel}>Previous Time</Text>
-                        <Text style={styles.comparisonValueOld}>
-                          {formatDateTime(rescheduleAppt.dateTime)}
-                        </Text>
+                    {/* Comparison card */}
+                    <View style={styles.comparisonCard}>
+                      <View style={styles.comparisonRow}>
+                        <Text style={styles.comparisonLabel}>Previous</Text>
+                        <Text style={styles.comparisonOld}>{formatDateTime(rescheduleAppt.dateTime)}</Text>
                       </View>
-                      
-                      <View style={styles.comparisonDivider} />
-
-                      <View style={styles.comparisonItem}>
+                      <View style={styles.comparisonArrow}>
+                        <Text style={{ fontSize: 16 }}>↓</Text>
+                      </View>
+                      <View style={styles.comparisonRow}>
                         <Text style={styles.comparisonLabel}>New Time</Text>
-                        <Text style={styles.comparisonValueNew}>
-                          {formatDateTime(selectedSlot?.dateTime)}
-                        </Text>
+                        <Text style={styles.comparisonNew}>{formatDateTime(selectedSlot?.dateTime)}</Text>
                       </View>
                     </View>
 
-                    <TouchableOpacity
-                      style={styles.primaryBtn}
-                      disabled={submitting}
-                      onPress={confirmReschedule}
-                    >
-                      {submitting ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text style={styles.primaryText}>Confirm</Text>
-                      )}
+                    <TouchableOpacity style={[styles.primaryBtn, submitting && { opacity: 0.6 }]} disabled={submitting} onPress={confirmReschedule}>
+                      {submitting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryText}>Confirm Reschedule</Text>}
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.secondaryBtn}
-                      onPress={() => setReviewMode(false)}
-                    >
-                      <Text style={styles.secondaryText}>Go Back</Text>
+                    <TouchableOpacity style={styles.ghostBtn} onPress={() => setReviewMode(false)}>
+                      <Text style={styles.ghostBtnText}>Go Back</Text>
                     </TouchableOpacity>
-
-                    
-
-                    {/* <TouchableOpacity
-                      style={styles.dangerBtn}
-                      onPress={() => setRescheduleAppt(null)}
-                    >
-                      <Text style={styles.dangerText}>Cancel</Text>
-                    </TouchableOpacity> */}
                   </>
                 )}
               </>
@@ -822,8 +775,60 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(238,240,248,0.9)',
   },
 
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6, color: COLORS.primary },
-  modalSub: { fontSize: 13, color: COLORS.gray, marginBottom: SPACING.md, textAlign: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 4, color: COLORS.primary },
+  modalSub: { fontSize: 12, color: COLORS.gray, marginBottom: 18, textAlign: 'center' },
+
+  /* Reschedule modal */
+  rescheduleIconWrap: {
+    width: 48, height: 48, borderRadius: 16,
+    backgroundColor: COLORS.primary + '10',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+  },
+  datePickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%',
+    backgroundColor: '#f4f5f9', borderRadius: 14,
+    paddingVertical: 12, paddingHorizontal: 14,
+    marginBottom: 16, borderWidth: 1, borderColor: '#f0f1f6',
+  },
+  datePickerText: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  datePickerHint: { fontSize: 11, fontWeight: '600', color: COLORS.accent1 },
+  slotLoadingWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 16 },
+  slotLoadingText: { fontSize: 12, color: COLORS.gray },
+  slotSection: { marginBottom: 14, width: '100%' },
+  slotWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  slotChip: {
+    paddingVertical: 9, paddingHorizontal: 14, borderRadius: 10,
+    backgroundColor: '#fafbfe', borderWidth: 1, borderColor: '#f0f1f6',
+  },
+  slotChipActive: {
+    backgroundColor: COLORS.primary, borderColor: COLORS.primary,
+    shadowColor: COLORS.primary, shadowOpacity: 0.15, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 }, elevation: 4,
+  },
+  slotChipText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
+  slotChipTextActive: { color: COLORS.white },
+  ghostBtn: { marginTop: 10, paddingVertical: 10, alignItems: 'center', width: '100%' },
+  ghostBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.gray },
+
+  /* Comparison card */
+  comparisonCard: {
+    width: '100%', backgroundColor: '#f4f5f9', borderRadius: 16,
+    padding: 16, marginBottom: 4, borderWidth: 1, borderColor: '#f0f1f6',
+  },
+  comparisonRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  comparisonArrow: { alignItems: 'center', paddingVertical: 6 },
+  comparisonOld: { fontSize: 13, color: COLORS.gray, fontWeight: '600', textDecorationLine: 'line-through' },
+  comparisonNew: { fontSize: 13, color: COLORS.success, fontWeight: '700' },
+
+  /* Reschedule success */
+  rescheduleSuccessIcon: {
+    width: 52, height: 52, borderRadius: 26, backgroundColor: COLORS.success,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+    shadowColor: COLORS.success, shadowOpacity: 0.25, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 }, elevation: 6,
+  },
+  rescheduleSuccessTitle: { fontSize: 18, fontWeight: '700', color: COLORS.primary, marginBottom: 4 },
+  rescheduleSuccessSub: { fontSize: 12, color: COLORS.gray, textAlign: 'center' },
 
   dateCard: {
     padding: 14,
@@ -957,38 +962,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  comparisonContainer: {
-    width: '100%',
-    backgroundColor: '#f4f5f9',
-    borderRadius: 16,
-    padding: SPACING.md,
-    marginVertical: SPACING.md,
-  },
-  comparisonItem: {
-    marginBottom: SPACING.sm,
-  },
   comparisonLabel: {
     fontSize: 11,
     color: COLORS.gray,
     fontWeight: '600',
-    marginBottom: 4,
+    letterSpacing: 0.2,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  comparisonValueOld: {
-    fontSize: 14,
-    color: COLORS.gray,
-    fontWeight: '600',
-    textDecorationLine: 'line-through',
-  },
-  comparisonValueNew: {
-    fontSize: 15,
-    color: COLORS.success,
-    fontWeight: '700',
-  },
-  comparisonDivider: {
-    height: 1,
-    backgroundColor: '#f0f1f6',
-    marginVertical: 12,
   },
 });

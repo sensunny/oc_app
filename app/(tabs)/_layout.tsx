@@ -8,9 +8,11 @@ import {
 } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../../constants/theme';
+import { FloatingCallBubble } from '../../components/FloatingCallBubble';
 
 export default function TabLayout() {
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -94,6 +96,8 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    <FloatingCallBubble />
+    </View>
   );
 }
 
