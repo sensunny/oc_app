@@ -205,7 +205,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.white} />}
       >
         {/* Spacer for header */}
-        <View style={{ height: 216 }} />
+        <View style={{ height: 248 }} />
 
         {/* White body sheet */}
         <View style={s.body}>
@@ -247,7 +247,7 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 240,
+    height: 260,
   },
 
   headerInner: {
@@ -255,7 +255,7 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 48,
+    paddingTop: 60,
     paddingHorizontal: 22,
     zIndex: 2,
   },
@@ -265,22 +265,22 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   logoImg: {
-    width: 105,
-    height: 32,
+    width: 120,
+    height: 36,
   },
 
   welcomeLabel: {
-    fontSize: 13,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.75)',
     letterSpacing: 0.2,
   },
   patientName: {
-    fontSize: 21,
+    fontSize: 24,
     fontWeight: '700',
     color: COLORS.white,
-    marginTop: 2,
+    marginTop: 3,
     marginBottom: 10,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
 
   idPill: {
@@ -288,21 +288,21 @@ const s = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 20,
-    gap: 5,
+    gap: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
   },
   idPillText: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.white,
     fontWeight: '600',
     letterSpacing: 0.2,
   },
   idPillSpacing: {
-    height: 16,
+    height: 28,
   },
 
   /* ── Scroll / Body ── */
@@ -345,21 +345,21 @@ const s = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.8)',
   },
   statIconWrap: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: COLORS.primary,
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.gray,
     fontWeight: '500',
     letterSpacing: 0.2,
@@ -370,7 +370,7 @@ const s = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: COLORS.primary,
     marginBottom: 12,
@@ -407,9 +407,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
   },
   infoIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -418,14 +418,14 @@ const s = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.gray,
     fontWeight: '500',
     marginBottom: 2,
     letterSpacing: 0.1,
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.primary,
     fontWeight: '600',
   },

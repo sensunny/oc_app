@@ -209,7 +209,11 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <MenuItem
               icon={Phone}
-              onPress={() => Linking.openURL(`tel:${patient?.otherData?.oncare_number}`)}
+              onPress={() => {
+                const num = patient?.otherData?.oncare_number || '';
+                const formatted = num.startsWith('+') ? num : `+91${num}`;
+                Linking.openURL(`tel:${formatted}`);
+              }}
               title="Oncare Support Number"
               subtitle={patient?.otherData?.oncare_number || ''}
               showChevron={false}
@@ -253,13 +257,13 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: 48,
+    paddingTop: 60,
     paddingBottom: 18,
     alignItems: 'center',
   },
   logoImg: {
-    width: 105,
-    height: 32,
+    width: 120,
+    height: 36,
     marginBottom: 12,
   },
   avatarContainer: {

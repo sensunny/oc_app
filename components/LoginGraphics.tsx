@@ -93,3 +93,97 @@ export const ShieldGraphic = ({ size = 22 }: { size?: number }) => (
     />
   </Svg>
 );
+
+/* ── DNA Helix — left side ── */
+export const DNAHelixGraphic = ({ size = 140 }: { size?: number }) => (
+  <Svg width={size * 0.35} height={size} viewBox="0 0 50 140" fill="none">
+    <Defs>
+      <SvgGradient id="dnaGrad" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor={COLORS.white} stopOpacity="0.3" />
+        <Stop offset="1" stopColor={COLORS.accent1} stopOpacity="0.1" />
+      </SvgGradient>
+    </Defs>
+    {/* Left strand */}
+    <Path
+      d="M10 0 C10 20, 40 20, 40 40 C40 60, 10 60, 10 80 C10 100, 40 100, 40 120 C40 140, 10 140, 10 140"
+      stroke="url(#dnaGrad)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      fill="none"
+    />
+    {/* Right strand */}
+    <Path
+      d="M40 0 C40 20, 10 20, 10 40 C10 60, 40 60, 40 80 C40 100, 10 100, 10 120 C10 140, 40 140, 40 140"
+      stroke="url(#dnaGrad)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      fill="none"
+    />
+    {/* Cross bars */}
+    {[20, 40, 60, 80, 100, 120].map((y, i) => (
+      <Path
+        key={i}
+        d={`M${i % 2 === 0 ? 15 : 20} ${y} L${i % 2 === 0 ? 35 : 30} ${y}`}
+        stroke={COLORS.white}
+        strokeWidth="1"
+        strokeLinecap="round"
+        opacity={0.15}
+      />
+    ))}
+  </Svg>
+);
+
+/* ── Stethoscope outline — bottom right ── */
+export const StethoscopeGraphic = ({ size = 80 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+    <Defs>
+      <SvgGradient id="stethGrad" x1="0" y1="0" x2="1" y2="1">
+        <Stop offset="0" stopColor={COLORS.white} stopOpacity="0.25" />
+        <Stop offset="1" stopColor={COLORS.accent2} stopOpacity="0.12" />
+      </SvgGradient>
+    </Defs>
+    {/* Tube */}
+    <Path
+      d="M20 10 C20 10, 15 30, 25 45 C35 60, 45 55, 45 45 C45 35, 35 30, 35 20"
+      stroke="url(#stethGrad)"
+      strokeWidth="2"
+      strokeLinecap="round"
+      fill="none"
+    />
+    {/* Earpieces */}
+    <Circle cx="20" cy="8" r="4" fill={COLORS.white} opacity={0.12} />
+    <Circle cx="35" cy="18" r="4" fill={COLORS.white} opacity={0.12} />
+    {/* Chest piece */}
+    <Circle cx="25" cy="50" r="8" stroke={COLORS.white} strokeWidth="1.5" opacity={0.15} fill="none" />
+    <Circle cx="25" cy="50" r="4" fill={COLORS.accent1} opacity={0.1} />
+  </Svg>
+);
+
+/* ── Molecule / atom rings — decorative ── */
+export const MoleculeGraphic = ({ size = 60 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 60 60" fill="none">
+    {/* Orbits */}
+    <Circle cx="30" cy="30" r="20" stroke={COLORS.white} strokeWidth="0.8" opacity={0.12} fill="none" />
+    <G rotation={60} origin="30, 30">
+      <Circle cx="30" cy="30" r="20" stroke={COLORS.white} strokeWidth="0.8" opacity={0.1} fill="none" />
+    </G>
+    <G rotation={120} origin="30, 30">
+      <Circle cx="30" cy="30" r="20" stroke={COLORS.accent1} strokeWidth="0.8" opacity={0.08} fill="none" />
+    </G>
+    {/* Center nucleus */}
+    <Circle cx="30" cy="30" r="4" fill={COLORS.white} opacity={0.15} />
+    {/* Electrons */}
+    <Circle cx="30" cy="10" r="2.5" fill={COLORS.accent1} opacity={0.2} />
+    <Circle cx="47" cy="40" r="2" fill={COLORS.white} opacity={0.18} />
+    <Circle cx="13" cy="40" r="2" fill={COLORS.accent2} opacity={0.15} />
+  </Svg>
+);
+
+/* ── Capsule pill — small decorative ── */
+export const CapsuleGraphic = ({ size = 40 }: { size?: number }) => (
+  <Svg width={size} height={size * 0.5} viewBox="0 0 40 20" fill="none">
+    <Rect x="2" y="2" width="36" height="16" rx="8" stroke={COLORS.white} strokeWidth="1.2" opacity={0.15} fill="none" />
+    <Rect x="20" y="2" width="18" height="16" rx="8" fill={COLORS.accent1} opacity={0.08} />
+    <Path d="M20 2 L20 18" stroke={COLORS.white} strokeWidth="0.8" opacity={0.12} />
+  </Svg>
+);

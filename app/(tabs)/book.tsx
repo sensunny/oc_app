@@ -498,8 +498,8 @@ const st = StyleSheet.create({
   headerBg: { position: 'absolute', height: 220, left: 0, right: 0 },
 
   /* Header */
-  header: { paddingTop: 48, paddingHorizontal: 22, paddingBottom: 10, alignItems: 'center' },
-  logo: { width: 105, height: 32, marginBottom: 12 },
+  header: { paddingTop: 60, paddingHorizontal: 22, paddingBottom: 10, alignItems: 'center' },
+  logo: { width: 120, height: 36, marginBottom: 12 },
   headerTitle: { fontSize: 20, fontWeight: '700', color: COLORS.white, letterSpacing: -0.2, marginBottom: 14 },
 
   /* Progress */

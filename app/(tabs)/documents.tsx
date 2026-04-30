@@ -212,15 +212,15 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingTop: 48,
+    paddingTop: 60,
     paddingBottom: 16,
     paddingHorizontal: 22,
     alignItems: 'center',
   },
 
   logoImg: {
-    width: 105,
-    height: 32,
+    width: 120,
+    height: 36,
     marginBottom: 14,
   },
 

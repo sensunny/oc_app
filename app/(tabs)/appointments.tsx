@@ -633,14 +633,14 @@ const styles = StyleSheet.create({
   headerBg: { position: 'absolute', height: 200, left: 0, right: 0 },
 
   pageHeader: {
-    paddingTop: 48,
+    paddingTop: 60,
     paddingHorizontal: 22,
     paddingBottom: 14,
     alignItems: 'center',
   },
   logoImg: {
-    width: 105,
-    height: 32,
+    width: 120,
+    height: 36,
     marginBottom: 14,
   },
   titleRow: {

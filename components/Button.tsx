@@ -69,12 +69,12 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: SPACING.lg,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 46,
+    minHeight: 50,
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: 15,
     fontWeight: '600',
     letterSpacing: 0.3,
   },

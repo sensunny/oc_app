@@ -13,6 +13,8 @@ import {
   Pressable,
   Animated,
   Keyboard,
+  Modal,
+  TextInput,
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
@@ -22,7 +24,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { COLORS, LOGO_URL } from '../constants/theme';
 import { PremiumAlert } from '../components/PremiumAlert';
-import { PulseGraphic, MedicalCrossGraphic, FloatingDots, ShieldGraphic } from '../components/LoginGraphics';
+import { PulseGraphic, MedicalCrossGraphic, FloatingDots, ShieldGraphic, DNAHelixGraphic, StethoscopeGraphic, MoleculeGraphic, CapsuleGraphic } from '../components/LoginGraphics';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
@@ -47,6 +49,8 @@ export default function LoginScreen() {
   const [alert, setAlert] = useState({ visible: false, title: '', message: '' });
   const [callbackName, setCallbackName] = useState('');
   const [isCallback, setIsCallback] = useState(false);
+  const [otpInfoMessage, setOtpInfoMessage] = useState('');
+  const [callbackPopup, setCallbackPopup] = useState({ visible: false, message: '' });
 
   const dropdownAnim = useRef(new Animated.Value(0)).current;
 
@@ -77,14 +81,14 @@ export default function LoginScreen() {
       setStep('otp');
       setUserMobile(response.data.mobile);
       setHospitalUids(response.data.hospitalUids || []);
+      setOtpInfoMessage(response?.message || response?.data?.message || '');
       if (response.data.hospitalUids?.length === 1) {
         setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
       }
     }
 
     if (response?.code === 3) {
-      setIsCallback(true);
-      setAlert({ visible: true, title: 'Info', message: response?.message || 'Please request a callback' });
+      setCallbackPopup({ visible: true, message: response?.message || 'No details found for this number.' });
       return;
     }
 
@@ -99,6 +103,33 @@ export default function LoginScreen() {
     if (!response || response?.code !== 1) {
       setAlert({ visible: true, title: 'Error', message: response?.message || 'Something went wrong' });
     }
+  };
+
+  const handleCallbackRequest = async (name: string) => {
+    if (!name.trim()) return;
+    setCallbackPopup({ ...callbackPopup, visible: false });
+    setCallbackName(name);
+    setLoading(true);
+    const response: any = await sendOTP(identifier, name);
+    setLoading(false);
+
+    if (response?.code === 4) {
+      setCallbackName('');
+      setIdentifier('');
+      setAlert({ visible: true, title: 'Success', message: response?.message || 'Our team will contact you shortly' });
+      return;
+    }
+    if (response?.code === 1 || response?.data?.code === 1) {
+      setStep('otp');
+      setUserMobile(response.data.mobile);
+      setHospitalUids(response.data.hospitalUids || []);
+      setOtpInfoMessage(response?.message || response?.data?.message || '');
+      if (response.data.hospitalUids?.length === 1) {
+        setSelectedHospitalUid(response.data.hospitalUids[0].hospitalUid);
+      }
+      return;
+    }
+    setAlert({ visible: true, title: 'Info', message: response?.message || 'Something went wrong' });
   };
 
   const handleVerifyOtp = async () => {
@@ -132,6 +163,7 @@ export default function LoginScreen() {
   const handleBack = () => {
     setOtp('');
     setErrors({ identifier: '', otp: '', hospitalUid: '' });
+    setOtpInfoMessage('');
     setStep('identifier');
   };
 
@@ -154,9 +186,7 @@ export default function LoginScreen() {
 
       {/* Background gradient — matched to home screen */}
       <LinearGradient
-        colors={[COLORS.primary, COLORS.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
+        colors={[COLORS.primary, COLORS.secondary, COLORS.accent1]}
         style={StyleSheet.absoluteFillObject}
       />
 
@@ -172,6 +202,22 @@ export default function LoginScreen() {
         {/* Medical cross — bottom left */}
         <View style={styles.crossWrap}>
           <MedicalCrossGraphic size={70} />
+        </View>
+        {/* DNA Helix — left side */}
+        <View style={styles.dnaWrap}>
+          <DNAHelixGraphic size={160} />
+        </View>
+        {/* Stethoscope — bottom right */}
+        <View style={styles.stethWrap}>
+          <StethoscopeGraphic size={90} />
+        </View>
+        {/* Molecule — top left */}
+        <View style={styles.moleculeWrap}>
+          <MoleculeGraphic size={55} />
+        </View>
+        {/* Capsule — mid right */}
+        <View style={styles.capsuleWrap}>
+          <CapsuleGraphic size={45} />
         </View>
       </View>
 
@@ -201,9 +247,7 @@ export default function LoginScreen() {
 
             <View style={styles.titleRow}>
               <Text style={styles.title}>
-                {step === 'identifier'
-                  ? isCallback ? 'Request a Callback' : 'Welcome Back'
-                  : 'Verify OTP'}
+                {step === 'identifier' ? 'Welcome Back' : 'Verify OTP'}
               </Text>
               <View style={styles.shieldWrap}>
                 <ShieldGraphic size={18} />
@@ -212,46 +256,28 @@ export default function LoginScreen() {
 
             <Text style={styles.subtitle}>
               {step === 'identifier'
-                ? isCallback
-                  ? 'Share your name and our team will reach out'
-                  : 'Access your Oncare medical records securely'
+                ? 'Access your Oncare medical records securely'
                 : `Enter the code sent to ${userMobile}`}
             </Text>
+
+            {/* OTP info message */}
+            {step === 'otp' && otpInfoMessage ? (
+              <View style={styles.infoMessageWrap}>
+                <Text style={styles.infoMessageText}>{otpInfoMessage}</Text>
+              </View>
+            ) : null}
 
             {/* Divider */}
             <View style={styles.divider} />
 
             {step === 'identifier' ? (
               <>
-                {isCallback ? (
-                  <>
-                    <Input
-                      label="Your Name"
-                      value={callbackName}
-                      onChangeText={setCallbackName}
-                      placeholder="Enter your name"
-                    />
-                    <LinearGradient
-                      colors={[COLORS.primary, COLORS.accent1]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.ctaGradient}
-                    >
-                      <Button
-                        title="Get a Callback"
-                        onPress={handleSendOtp}
-                        loading={loading}
-                        transparent
-                      />
-                    </LinearGradient>
-                  </>
-                ) : (
-                  <>
                     {/* Tab switcher */}
-                    <View style={styles.tabRow}>
+                    <View style={[styles.tabRow, loading && { opacity: 0.5 }]}>
                       <Pressable
                         style={[styles.tab, loginMethod === 'mobile' && styles.tabActive]}
                         onPress={() => { setLoginMethod('mobile'); setIdentifier(''); setErrors({ ...errors, identifier: '' }); }}
+                        disabled={loading}
                       >
                         <Text style={[styles.tabLabel, loginMethod === 'mobile' && styles.tabLabelActive]}>
                           Mobile Number
@@ -260,6 +286,7 @@ export default function LoginScreen() {
                       <Pressable
                         style={[styles.tab, loginMethod === 'hospitalUid' && styles.tabActive]}
                         onPress={() => { setLoginMethod('hospitalUid'); setIdentifier(''); setErrors({ ...errors, identifier: '' }); }}
+                        disabled={loading}
                       >
                         <Text style={[styles.tabLabel, loginMethod === 'hospitalUid' && styles.tabLabelActive]}>
                           Hospital UID
@@ -289,8 +316,6 @@ export default function LoginScreen() {
                         transparent
                       />
                     </LinearGradient>
-                  </>
-                )}
               </>
             ) : (
               <>
@@ -369,15 +394,183 @@ export default function LoginScreen() {
                   variant="outline"
                   onPress={handleBack}
                   style={styles.backBtn}
+                  disabled={loading}
                 />
               </>
             )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Callback Popup */}
+      <CallbackPopup
+        visible={callbackPopup.visible}
+        message={callbackPopup.message}
+        loading={loading}
+        onSubmit={handleCallbackRequest}
+        onClose={() => setCallbackPopup({ visible: false, message: '' })}
+      />
     </View>
   );
 }
+
+/* ================= CALLBACK POPUP ================= */
+
+const CallbackPopup = ({ visible, message, loading, onSubmit, onClose }: {
+  visible: boolean;
+  message: string;
+  loading: boolean;
+  onSubmit: (name: string) => void;
+  onClose: () => void;
+}) => {
+  const [name, setName] = React.useState('');
+
+  React.useEffect(() => {
+    if (visible) setName('');
+  }, [visible]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={cbStyles.overlay}>
+        <View style={cbStyles.card}>
+          {/* Icon */}
+          <View style={cbStyles.iconWrap}>
+            <View style={cbStyles.iconInner}>
+              <Text style={{ fontSize: 20 }}>📞</Text>
+            </View>
+          </View>
+
+          {/* Message */}
+          <Text style={cbStyles.title}>We couldn't find you</Text>
+          <Text style={cbStyles.message}>{message}</Text>
+
+          {/* Name input */}
+          <Text style={cbStyles.label}>What should we call you?</Text>
+          <TextInput
+            style={cbStyles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your name"
+            placeholderTextColor={COLORS.gray}
+          />
+
+          {/* Submit */}
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.accent1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={cbStyles.btnGradient}
+          >
+            <Pressable
+              style={cbStyles.btn}
+              onPress={() => onSubmit(name)}
+              disabled={loading || !name.trim()}
+            >
+              <Text style={cbStyles.btnText}>
+                {loading ? 'Requesting...' : 'Request a Callback'}
+              </Text>
+            </Pressable>
+          </LinearGradient>
+
+          {/* Cancel */}
+          <Pressable onPress={onClose} style={cbStyles.cancelWrap}>
+            <Text style={cbStyles.cancelText}>Cancel</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const cbStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    width: '88%',
+    backgroundColor: COLORS.white,
+    borderRadius: 22,
+    padding: 26,
+    alignItems: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.1,
+    shadowRadius: 30,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(238,240,248,0.9)',
+  },
+  iconWrap: {
+    marginBottom: 16,
+  },
+  iconInner: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORS.primary + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 6,
+  },
+  message: {
+    fontSize: 13,
+    color: COLORS.gray,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  label: {
+    alignSelf: 'flex-start',
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 6,
+    letterSpacing: 0.2,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#f4f5f9',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    fontSize: 15,
+    color: COLORS.primary,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#f0f1f6',
+  },
+  btnGradient: {
+    width: '100%',
+    borderRadius: 14,
+  },
+  btn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  btnText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  cancelWrap: {
+    marginTop: 14,
+    paddingVertical: 6,
+  },
+  cancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.gray,
+  },
+});
 
 /* ================= STYLES ================= */
 
@@ -440,15 +633,40 @@ const styles = StyleSheet.create({
     left: 15,
     opacity: 0.9,
   },
+  dnaWrap: {
+    position: 'absolute',
+    left: -5,
+    top: SCREEN_H * 0.15,
+    opacity: 0.7,
+  },
+  stethWrap: {
+    position: 'absolute',
+    bottom: 40,
+    right: 10,
+    opacity: 0.6,
+  },
+  moleculeWrap: {
+    position: 'absolute',
+    top: 30,
+    left: 20,
+    opacity: 0.7,
+  },
+  capsuleWrap: {
+    position: 'absolute',
+    right: 30,
+    top: SCREEN_H * 0.42,
+    opacity: 0.6,
+    transform: [{ rotate: '-20deg' }],
+  },
 
   /* Logo */
   logoWrap: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   logo: {
-    width: 170,
-    height: 60,
+    width: 190,
+    height: 65,
     resizeMode: 'contain',
   },
   dotsWrap: {
@@ -495,16 +713,16 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: COLORS.secondary,
     letterSpacing: -0.3,
   },
 
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.gray,
-    lineHeight: 18,
+    lineHeight: 20,
     marginBottom: 6,
   },
 
@@ -512,6 +730,23 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f0f1f6',
     marginVertical: 16,
+  },
+
+  /* OTP info message */
+  infoMessageWrap: {
+    backgroundColor: COLORS.success + '0A',
+    borderWidth: 1,
+    borderColor: COLORS.success + '20',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  infoMessageText: {
+    fontSize: 12,
+    color: COLORS.success,
+    fontWeight: '600',
+    lineHeight: 17,
   },
 
   /* Tabs */
@@ -524,7 +759,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 8,
   },
@@ -537,7 +772,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.gray,
   },

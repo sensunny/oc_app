@@ -56,7 +56,7 @@ export const FloatingCallBubble = () => {
         didDrag.current = false;
         pan.setOffset({ x: (pan.x as any)._value, y: (pan.y as any)._value });
         pan.setValue({ x: 0, y: 0 });
-        Animated.spring(scaleAnim, { toValue: 0.93, useNativeDriver: true, friction: 8 }).start();
+        Animated.spring(scaleAnim, { toValue: 0.93, useNativeDriver: false, friction: 8 }).start();
       },
       onPanResponderMove: (_, g) => {
         if (Math.abs(g.dx) > 3 || Math.abs(g.dy) > 3) didDrag.current = true;
@@ -64,7 +64,7 @@ export const FloatingCallBubble = () => {
       },
       onPanResponderRelease: () => {
         pan.flattenOffset();
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5 }).start();
+        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: false, friction: 5 }).start();
 
         const rawX = (pan.x as any)._value;
         const rawY = (pan.y as any)._value;
@@ -90,7 +90,8 @@ export const FloatingCallBubble = () => {
   const dialNumber = (number: string) => {
     setShowModal(false);
     setExpanded(false);
-    Linking.openURL(`tel:${number}`);
+    const formatted = number.startsWith('+') ? number : `+91${number}`;
+    Linking.openURL(`tel:${formatted}`);
   };
 
   const handleCenterCall = async () => {
