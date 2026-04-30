@@ -179,7 +179,6 @@ export const FloatingCallBubble = () => {
                   <Building2 size={22} color={COLORS.primary} />
                 </View>
                 <Text style={styles.optionTitle}>At Oncare Center</Text>
-                <Text style={styles.optionDesc}>We'll connect you to your center</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -192,7 +191,6 @@ export const FloatingCallBubble = () => {
                   <Home size={22} color={COLORS.success} />
                 </View>
                 <Text style={styles.optionTitle}>At Home</Text>
-                <Text style={styles.optionDesc}>Connect to Oncare support</Text>
               </TouchableOpacity>
             </View>
 
