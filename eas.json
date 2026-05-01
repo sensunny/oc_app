@@ -49,6 +49,10 @@
       "android": {
         "buildType": "app-bundle"
       },
+      "ios": {
+        "image": "latest",
+        "buildConfiguration": "Release"
+      },
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "production"
       },
